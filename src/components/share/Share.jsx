@@ -7,6 +7,7 @@ import { useAppContext } from '../../context/AppContext';
 export default function Share({getPosts, renderPostsImmediate}) {
   const DEFAULT_BTN_LABEL = 'Share'
   const EMPTY_IMAGE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+  const EMPTY_TEXT = '0x0000000000000000000000000000000000000000000000000000000000000000';
   const [selectedFile, setSelectedFile] = useState();
   const [contents, setContents] = useState('');
   const [btnLabel, setBtnLabel] = useState(DEFAULT_BTN_LABEL);
@@ -23,6 +24,7 @@ export default function Share({getPosts, renderPostsImmediate}) {
         alert('Point Social only supports image and video until 100 MB. Please change to a samller image or video file!')  
       }
       setSelectedFile(event.target.files[0]);
+      setBtnEnabled(true);
     } else {
       alert('Point Social only supports image and video uploads for now. Please change to an image or video file!')
     }
@@ -45,7 +47,7 @@ export default function Share({getPosts, renderPostsImmediate}) {
 
     try {
       // Save the post content to the storage layer and keep the storage id
-      let {data: storageId} = await window.point.storage.putString({data: contents});
+      let {data: storageId} = (contents && contents.trim().length > 0)? await window.point.storage.putString({data: contents}) : { data: EMPTY_TEXT }; 
       let imageId = EMPTY_IMAGE;
       if(selectedFile){
         const formData = new FormData()
@@ -58,12 +60,17 @@ export default function Share({getPosts, renderPostsImmediate}) {
       renderPostsImmediate({contents,image:imageId})
       setSaving(false);
       setContents('');
-      setSelectedFile()
+      setSelectedFile();
       fileInputRef.current.value = null
+      setBtnEnabled(false);
       // await getPosts();
     } catch (e) {
       console.error('Error sharing post: ', e.message);
       setSaving(false);
+      setContents('');
+      setSelectedFile();
+      fileInputRef.current.value = null
+      setBtnEnabled(false);
       setShareError(e);
     }
   };
