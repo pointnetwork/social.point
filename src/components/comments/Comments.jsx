@@ -94,6 +94,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
               id="contents"
               name="contents"
               placeholder={"Any comment?"}
+              maxlength="140"
               className="commentCorners"
               onChange={onContentsChange}
               value={contents}
