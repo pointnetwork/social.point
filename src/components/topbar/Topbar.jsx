@@ -9,10 +9,12 @@ export default function Topbar() {
   return (
     <div className="topbarContainer">
       <div className="topbarLeft flex v-center">
-        <img
-          src={pointlogo}
-          alt=""
-          className="topbarImg" />
+          <a href="/">
+            <img
+              src={pointlogo}
+              alt=""
+              className="topbarImg" />
+          </a>
           <Link to="/" style={{ textDecoration: "none" }}>
             <span className="logo">Point Social</span>
           </Link>
