@@ -6,6 +6,7 @@ import Post from "../post/Post";
 import Share from "../share/Share";
 import Identity from "../identity/Identity";
 import LoadingSpinner from '../loading/LoadingSpinner';
+const EMPTY_TEXT = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const NUM_POSTS_PER_CALL = 20;
 
@@ -85,7 +86,7 @@ const Feed = ({account}) =>{
 
       const postsContent = await Promise.all(_posts.map(async (post) => {
           try {
-              const {data: contents} = await window.point.storage.getString({ id: post.contents, encoding: 'utf-8' });
+              const {data: contents} = (post.contents === EMPTY_TEXT)? '' : await window.point.storage.getString({ id: post.contents, encoding: 'utf-8' });
               const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: post.from});
               post.identity = identity;
               post.contents = contents;
