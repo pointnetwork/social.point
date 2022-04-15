@@ -44,3 +44,7 @@
     align-items: center;
     justify-content: space-between;
   }
+
+  p {
+    white-space: pre-wrap;
+  }

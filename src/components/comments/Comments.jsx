@@ -90,15 +90,17 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
     return (
       <div className="commentWrapper">
         <form className="commentBottom" onSubmit={submitHandler}>
-          <input
+          <textarea
               id="contents"
               name="contents"
               placeholder={"Any comment?"}
-              maxlength="140"
+              maxlength="300"
+              rows="3"
+              cols="50"              
               className="commentCorners"
               onChange={onContentsChange}
-              value={contents}
-            />
+              value={contents}>
+          </textarea>
           <button className="commentButton" type="submit" disabled={!btnEnabled}>
             {btnLabel}
           </button>

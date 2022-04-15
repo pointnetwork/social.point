@@ -69,7 +69,7 @@ export default function Post({ post, reloadPostLikesCount }) {
         </div>
         <div className="postCenter">
           {post.image != EMPTY_IMAGE && mediaTag }
-          <span className="postText">{post?.contents}</span>
+          <p className="postText">{post?.contents}</p>
         </div>
         <div className="postBottom">
           <div className="postBottomLeft">
