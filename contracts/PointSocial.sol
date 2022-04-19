@@ -54,7 +54,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
     address private _migrator;
 
-    enum Action {Migrator, Post, Like, Comment}
+    enum Action {Migrator, Post, Like, Comment, Edit}
 
     function initialize() public initializer {
         __Ownable_init();
@@ -87,6 +87,17 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         postIdsByOwner[msg.sender].push(newPostId);
 
         emit StateChange(newPostId, msg.sender, block.timestamp, Action.Post);
+    }
+
+    function editPost(uint256 postId, bytes32 contents, bytes32 image) public {
+        Post storage post = postById[postId];
+        require(post.createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+        require(msg.sender == post.from, "ERROR_CANNOT_EDIT_OTHERS_POSTS");
+
+        post.contents = contents;
+        post.image = image;
+
+        emit StateChange(postId, msg.sender, block.timestamp, Action.Edit);
     }
 
     function getAllPosts() public view returns (Post[] memory) {
