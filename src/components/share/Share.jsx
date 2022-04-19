@@ -88,7 +88,7 @@ export default function Share({getPosts, renderPostsImmediate}) {
             id="contents"
             name="contents"
             placeholder={"What's in your mind " + identity + "?"}
-            maxlength="300"
+            maxLength="300"
             rows="3"
             cols="50"
             className="shareInput"
