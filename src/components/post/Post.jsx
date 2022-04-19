@@ -6,11 +6,12 @@ import { Link } from "wouter";
 import likeImg from '../../assets/like.png';
 import profileImg from '../../assets/profile-pic.jpg';
 import Comments from '../comments/Comments'
+import PostEditor from "./PostEditor";
 
-
-export default function Post({ post, reloadPostLikesCount }) {
-  const EMPTY_IMAGE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+export default function Post({ post, reloadPostLikesCount, reloadPostContent }) {
+  const EMPTY_MEDIA = '0x0000000000000000000000000000000000000000000000000000000000000000';
   const [showComments, setShowComments] = useState(false);
+  const [editPost, setEditPost] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const { walletAddress } = useAppContext();
   const [loadImgError, setLoadImgError] = useState(false);
@@ -20,6 +21,9 @@ export default function Post({ post, reloadPostLikesCount }) {
     setShowComments(!showComments);
   }
 
+  const toggleEditPost = () => {
+    setEditPost(!editPost);
+  }
 
   const addLikeToPost = async () => {
     try {
@@ -29,6 +33,16 @@ export default function Post({ post, reloadPostLikesCount }) {
       console.error('Error updating likes: ', e.message);
     }
   };
+
+  const reloadPost = async (contents, image) => {
+    toggleEditPost();
+    try {
+      reloadPostContent(post.id, contents, image);
+    }
+    catch(e) {
+      console.error('Error updating the post', e.message);
+    }
+  }
 
   const onImgErrorHandler = (e) => {
     setLoadImgError(true);
@@ -40,7 +54,7 @@ export default function Post({ post, reloadPostLikesCount }) {
 
   let mediaTag;
   if (!loadImgError){
-    mediaTag = <img className="postImage" src={`/_storage/${post.image}`} onError={onImgErrorHandler}></img>;
+    mediaTag = <img className="postImage" src={`/_storage/${post.image}`} onError={onImgErrorHandler} alt=""></img>;
   }else{
     if(!loadVideoError){
       mediaTag = <video className="postImage" controls><source src={`/_storage/${post.image}`} onError={onVideoErrorHandler}></source></video>;
@@ -49,6 +63,9 @@ export default function Post({ post, reloadPostLikesCount }) {
     }
   }
   
+  const postedContent = <div><p className="postText">{post?.contents}</p></div>
+  const postedMedia = post.image !== EMPTY_MEDIA && mediaTag
+
   return (
     <div className="post">
       <div className="postWrapper">
@@ -61,15 +78,18 @@ export default function Post({ post, reloadPostLikesCount }) {
                     className="topbarImg"
                 />
             </Link>
-            {walletAddress == post.from ? <span className="posted-id">You posted</span> : <span className="postUsername">{post.identity}</span>}
+            {walletAddress === post.from ? <span className="posted-id">You posted</span> : <span className="postUsername">{post.identity}</span>}
           </div>
           <div className="postTopRight">
             <span className="postDate">{format(post.createdAt)}</span>
           </div>
         </div>
         <div className="postCenter">
-          {post.image != EMPTY_IMAGE && mediaTag }
-          <p className="postText">{post?.contents}</p>
+          { 
+            editPost?
+            <PostEditor post={post} toggleEditPost={toggleEditPost} reloadPost={reloadPost}/>:
+            [postedContent, postedMedia]
+          }
         </div>
         <div className="postBottom">
           <div className="postBottomLeft">
@@ -83,6 +103,7 @@ export default function Post({ post, reloadPostLikesCount }) {
           </div>
           <div className="postBottomRight">
             <span className="postCommentText" onClick={toggleShowComments}>{commentsCount} comments</span>
+            <span className="postEditText" onClick={toggleEditPost}>Edit</span>
           </div>
         </div>
         <div className="comments">

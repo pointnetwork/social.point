@@ -1,0 +1,65 @@
+.postEditor {
+  width: 100%;
+  border-radius: 6px;
+  -webkit-box-shadow: 0px 0px 16px -8px rgba(172, 173, 181, 0.68);
+  box-shadow:  0px 0px 16px -8px rgba(172, 173, 181, 0.68);
+}
+
+.editHr {
+  margin: 20px 0;
+  background:#dce2ea;
+  height: 1px;
+  border:none;
+}
+
+.editInput {
+  border: none;
+  width: 100%;
+}
+
+.editInput:focus {
+  outline: none;
+}
+
+.editBottom {
+  margin-top: 5px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.editOptions{
+    display: flex;
+    /* margin-left: 20px; */
+}
+
+.editFilePicker {
+    display: flex;
+    align-items: center;
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+.editIcon {
+    font-size: 18px;
+    margin-right: 3px;
+}
+
+.editOptionText{
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.editButton {
+  border: none;
+  border-radius: 5px;
+  margin-left: 5px;
+  background-color: #1C385B;
+  font-weight: 500;
+  cursor: pointer;
+  color: white;
+  width:80px;
+}
+
+
