@@ -65,6 +65,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent }) 
   
   const postedContent = <div><p className="postText">{post?.contents}</p></div>
   const postedMedia = post.image !== EMPTY_MEDIA && mediaTag
+  const postEdit = (walletAddress === post.from) && <span className="postEditText" onClick={toggleEditPost}>Edit</span>
 
   return (
     <div className="post">
@@ -103,7 +104,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent }) 
           </div>
           <div className="postBottomRight">
             <span className="postCommentText" onClick={toggleShowComments}>{commentsCount} comments</span>
-            <span className="postEditText" onClick={toggleEditPost}>Edit</span>
+            { postEdit } 
           </div>
         </div>
         <div className="comments">
