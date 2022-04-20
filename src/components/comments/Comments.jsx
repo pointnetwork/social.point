@@ -35,8 +35,8 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
     const renderCommentsImmediate = (newCommentContent) => {
       console.log('Using renderCommentsImmediate function.')
       setLoading(true);
-      updatedComments = [...comments];
-      newCommentId = comments.length + 1;
+      const updatedComments = [...comments];
+      const newCommentId = comments.length + 1;
       const newComment = {id: newCommentId, from: walletAddress, contents: newCommentContent, createdAt: Date.now()}
       updatedComments.push(newComment);
       setComments(updatedComments);
@@ -44,6 +44,14 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
       setLoading(false);
     }
 
+    const renderCommentContentImmediate = async(commentId, contents) => {
+      setLoading(true);
+      const updatedComments = [...comments];
+      updatedComments.filter((comment) => comment.id === commentId)[0].contents = contents;
+      setComments(updatedComments);
+      setLoading(false);
+    }
+  
     useEffect(() => {
         getComments()
     }, [postId])
@@ -94,7 +102,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
               id="contents"
               name="contents"
               placeholder={"Any comment?"}
-              maxlength="300"
+              maxLength="300"
               rows="3"
               cols="50"              
               className="commentCorners"
@@ -111,7 +119,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
         </Box>}
         {(!loading && comments.length === 0) && 'No comments yet. Be the first!'}
         {comments.map((comment) => (
-          <Comment key={comment.id} comment={comment} />
+          [ <Comment key={comment.id} comment={comment} renderCommentContentImmediate={renderCommentContentImmediate}/>, <hr className="commentHr" /> ]
         ))}
       </div>
     )
