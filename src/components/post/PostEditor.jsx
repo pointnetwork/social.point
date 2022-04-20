@@ -41,6 +41,11 @@ export default function PostEditor({ post, toggleEditPost, reloadPost }) {
     }
   };
 
+  const onFocus = event => {
+    const element = event.target;
+    element.selectionStart = element.value.length;
+  } 
+
   const onImgErrorHandler = (e) => {
     setLoadImgError(true);
   }
@@ -118,6 +123,7 @@ export default function PostEditor({ post, toggleEditPost, reloadPost }) {
         className="editInput"
         value={contents}
         onChange={onContentsChange}
+        onFocus={onFocus}
         autoFocus
         >
       </textarea>
