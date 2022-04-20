@@ -104,7 +104,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent }) 
           </div>
           <div className="postBottomRight">
             <span className="postCommentText" onClick={toggleShowComments}>{commentsCount} comments</span>
-            { commentsCount === '0' && postEdit } 
+            { (parseInt(commentsCount) === 0) && postEdit }
           </div>
         </div>
         <div className="comments">
