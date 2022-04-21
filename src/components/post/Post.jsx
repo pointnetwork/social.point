@@ -8,7 +8,7 @@ import profileImg from '../../assets/profile-pic.jpg';
 import Comments from '../comments/Comments'
 import PostEditor from "./PostEditor";
 
-export default function Post({ post, reloadPostLikesCount, reloadPostContent }) {
+export default function Post({ post, reloadPostLikesCount, reloadPostContent, reloadPosts }) {
   const EMPTY_MEDIA = '0x0000000000000000000000000000000000000000000000000000000000000000';
   const [showComments, setShowComments] = useState(false);
   const [editPost, setEditPost] = useState(false);
@@ -23,6 +23,17 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent }) 
 
   const toggleEditPost = () => {
     setEditPost(!editPost);
+  }
+
+  const deletePost = async () => {
+    try {
+      console.log(`Deleting post ${post.id}`);
+      const result = await window.point.contract.send({contract: 'PointSocial', method: 'deletePost', params: [post.id]});
+      console.log(result);
+      await reloadPosts(post.id);
+    } catch (e) {
+      console.error('Error deleting post: ', e.message);
+    }
   }
 
   const addLikeToPost = async () => {
@@ -66,6 +77,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent }) 
   const postedContent = <div><p className="postText">{post?.contents}</p></div>
   const postedMedia = post.image !== EMPTY_MEDIA && mediaTag
   const postEdit = (walletAddress === post.from) && <span className="postEditText" onClick={toggleEditPost}>Edit</span>
+  const postDelete = (walletAddress === post.from) && <span className="postDeleteText" onClick={deletePost}>Delete</span>
 
   return (
     <div className="post">
@@ -105,6 +117,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent }) 
           <div className="postBottomRight">
             <span className="postCommentText" onClick={toggleShowComments}>{commentsCount} comments</span>
             { (parseInt(commentsCount) === 0) && postEdit }
+            { (parseInt(commentsCount) === 0) && postDelete }
           </div>
         </div>
         <div className="comments">

@@ -11,7 +11,7 @@ const EMPTY_MEDIA = '0x000000000000000000000000000000000000000000000000000000000
 
 const NUM_POSTS_PER_CALL = 20;
 
-const Feed = ({account}) =>{
+const Feed = ({account}) => {
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
       if(numPosts === posts.length) return;
@@ -57,7 +57,7 @@ const Feed = ({account}) =>{
 
   const getPosts = async () => {
     setLoading(true);
-    const posts = await fetchPosts()
+    const posts = await fetchPosts();
     posts.sort(compareByTimestamp)
     setPosts(prev => [...prev,...posts]);
     setLoading(false);
@@ -80,7 +80,7 @@ const Feed = ({account}) =>{
         ? await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPostsByOwner', params: [account,posts.length,NUM_POSTS_PER_CALL]}) :
         await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPosts', params:[posts.length,NUM_POSTS_PER_CALL]})
 
-      const _posts = response.data.map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
+      const _posts = response.data.filter(r => (r[4] !== "0")).map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
           {id, from, contents, image, createdAt: createdAt*1000, likesCount, commentsCount}
         )
       )
@@ -125,6 +125,13 @@ const Feed = ({account}) =>{
     setPosts(updatedPosts);
   }
 
+  const reloadPosts = async(id) => {
+    setLoading(true);
+    const updatedPosts = [...posts].filter((post) => post.id !== id);
+    setPosts(updatedPosts);
+    setLoading(false);
+  } 
+
   return (
     <div className="feed">
       <div className="feedWrapper">
@@ -132,7 +139,7 @@ const Feed = ({account}) =>{
         {(!loading && feedError) && <span className='error'>Error loading feed: {feedError.message}. Did you deploy the contract sucessfully?</span>}
         {(!loading && !feedError && posts.length === 0) && <span className='no-post-to-show'>No posts made yet!</span>}
         {posts.map((p) => (
-          <Post key={p.id} post={p} reloadPostLikesCount={reloadPostLikesCount} reloadPostContent={reloadPostContent}/>
+          <Post key={p.id} post={p} reloadPostLikesCount={reloadPostLikesCount} reloadPostContent={reloadPostContent} reloadPosts={reloadPosts}/>
           ))}
         <div ref={observe}>
         {loading && <LoadingSpinner />}
