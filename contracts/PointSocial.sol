@@ -180,6 +180,16 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         emit StateChange(postId, msg.sender, block.timestamp, Action.Comment);
     }
 
+    function editCommentForPost(uint256 commentId, bytes32 contents) public {
+        Comment storage comment = commentById[commentId];
+        
+        require(comment.createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+        require(msg.sender == comment.from, "ERROR_CANNOT_EDIT_OTHERS_COMMENTS");
+        comment.contents = contents;
+
+        emit StateChange(commentId, msg.sender, block.timestamp, Action.Edit);
+    }
+
     function getAllCommentsForPost(uint256 postId) public view returns (Comment[] memory)
     {
         Comment[] memory _comments = new Comment[](commentIdsByPost[postId].length);

@@ -7,6 +7,7 @@
 
   .commentButton{
     border: none;
+    margin: 5px;
     padding: 7px;
     border-radius: 5px;
     background-color: #1C385B;
@@ -18,6 +19,7 @@
 
   .comment {
     font-size: 14px;
+    color: white;
   }
 
   .commentFrom {
@@ -47,4 +49,24 @@
 
   p {
     white-space: pre-wrap;
+  }
+
+  .commentText {
+    margin: 5px;
+    margin-left: 10px;
+    font-size: 13px;
+  }
+
+  .commentEditText {
+    margin-left: 5px;
+    cursor: pointer;
+    border-bottom: 1px dashed darkblue;
+    font-size: 10px;
+  }
+
+  .commentButtons {
+    margin: 5px;
+    display: block;
+    align-items: center;
+    justify-content: space-between;
   }
