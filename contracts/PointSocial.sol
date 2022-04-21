@@ -54,7 +54,11 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
     address private _migrator;
 
-    enum Action {Migrator, Post, Like, Comment, Edit}
+    mapping(uint256 => uint256) private postIdIndexes;
+    mapping(address => mapping(uint256 => uint256)) private postIdIndexByOwner;
+
+
+    enum Action {Migrator, Post, Like, Comment, Edit, Delete}
 
     function initialize() public initializer {
         __Ownable_init();
@@ -83,8 +87,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
             0
         );
         postIds.push(newPostId);
+        postIdIndexes[newPostId] = (postIds.length - 1);
         postById[newPostId] = _post;
         postIdsByOwner[msg.sender].push(newPostId);
+        postIdIndexByOwner[msg.sender][newPostId] = (postIdsByOwner[msg.sender].length - 1);
 
         emit StateChange(newPostId, msg.sender, block.timestamp, Action.Post);
     }
@@ -98,6 +104,36 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         post.image = image;
 
         emit StateChange(postId, msg.sender, block.timestamp, Action.Edit);
+    }
+
+    function deletePost(uint256 postId) public {
+        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+        require(msg.sender == postById[postId].from, "ERROR_CANNOT_DELETE_OTHERS_POSTS");
+        require(commentIdsByPost[postId].length == 0, "ERROR_CANNOT_DELETE_POST_WITH_COMMENTS");
+
+        uint256 i = postIdIndexes[postId];
+
+        if (i != postIds.length - 1 && postIds.length > 1) {
+            uint256 last =  postIds[postIds.length - 1];
+            postIds[i] = last;
+            postIdIndexes[last] = i;
+        }
+        postIds.pop();
+        delete postIdIndexes[postId];
+
+        uint256 j = postIdIndexByOwner[msg.sender][postId];
+
+        if (j != postIdsByOwner[msg.sender].length - 1 && postIdsByOwner[msg.sender].length > 1) {
+            uint256 last =  postIdsByOwner[msg.sender][postIds.length - 1];
+            postIdsByOwner[msg.sender][j] = last;
+            postIdIndexByOwner[msg.sender][last] = j;
+        }
+        postIdsByOwner[msg.sender].pop();
+        delete postIdIndexByOwner[msg.sender][postId];
+
+        delete postById[postId];
+
+        emit StateChange(postId, msg.sender, block.timestamp, Action.Delete);
     }
 
     function getAllPosts() public view returns (Post[] memory) {
@@ -266,6 +302,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
             postIdsByOwner[_post.from].push(id);
             postById[_post.id] = _post;
             _postIds.increment();
+
+            postIdIndexes[id] = (postIds.length - 1);
+            postIdIndexByOwner[msg.sender][id] = (postIdsByOwner[msg.sender].length - 1);
 
             emit StateChange(id, author, block.timestamp, Action.Post);
     }
