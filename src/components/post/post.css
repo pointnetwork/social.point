@@ -21,6 +21,7 @@
   .postText {
     display: flex;
     margin-top: 10px;
+    margin-bottom: 10px;
   }
 
   .postTop {
@@ -88,6 +89,13 @@
     cursor: pointer;
     border-bottom: 1px dashed gray;
     font-size: 15px;
+  }
+
+  .postEditText{
+    margin-left: 5px;
+    cursor: pointer;
+    border-bottom: 1px dashed darkblue;
+    font-size: 10px;
   }
 
   .comments {

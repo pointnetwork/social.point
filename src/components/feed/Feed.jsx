@@ -7,6 +7,7 @@ import Share from "../share/Share";
 import Identity from "../identity/Identity";
 import LoadingSpinner from '../loading/LoadingSpinner';
 const EMPTY_TEXT = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const EMPTY_MEDIA = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const NUM_POSTS_PER_CALL = 20;
 
@@ -114,6 +115,16 @@ const Feed = ({account}) =>{
     setPosts(updatedPosts);
   }
 
+  //TODO: temporary fix, it should wait until transaction is confirmed and read from smartcontract
+  const reloadPostContent = async(id, contents, image) => {
+    const updatedPosts = [...posts];
+    updatedPosts.filter((post) => post.id === id)[0].contents = contents;
+    if (image !== EMPTY_MEDIA) {
+      updatedPosts.filter((post) => post.id === id)[0].image = image;
+    }
+    setPosts(updatedPosts);
+  }
+
   return (
     <div className="feed">
       <div className="feedWrapper">
@@ -121,7 +132,7 @@ const Feed = ({account}) =>{
         {(!loading && feedError) && <span className='error'>Error loading feed: {feedError.message}. Did you deploy the contract sucessfully?</span>}
         {(!loading && !feedError && posts.length === 0) && <span className='no-post-to-show'>No posts made yet!</span>}
         {posts.map((p) => (
-          <Post key={p.id} post={p} reloadPostLikesCount={reloadPostLikesCount} />
+          <Post key={p.id} post={p} reloadPostLikesCount={reloadPostLikesCount} reloadPostContent={reloadPostContent}/>
           ))}
         <div ref={observe}>
         {loading && <LoadingSpinner />}
