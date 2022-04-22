@@ -186,9 +186,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         commentIdsByOwner[msg.sender].push(newCommentId);
         postById[postId].commentsCount += 1;
 
-        commentIndexByPost[postId][newCommentId] = (commentIdsByPost[postId].length - 1);
-        commentIndexByOwner[msg.sender][newCommentId] = (commentIdsByOwner[msg.sender].length - 1);
-
         emit StateChange(postId, msg.sender, block.timestamp, Action.Comment);
     }
 
@@ -202,33 +199,11 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         emit StateChange(commentId, msg.sender, block.timestamp, Action.Edit);
     }
 
-    function deleteCommentForPost(uint256 postId, uint256 commentId) public {
+    function deleteCommentForPost(uint256 commentId) public {
         require(commentById[commentId].createdAt != 0, "ERROR_COMMENT_DOES_NOT_EXISTS");
         require(msg.sender == commentById[commentId].from, "ERROR_CANNOT_DELETE_OTHERS_COMMENTS");
 
-        uint256 i = commentIndexByPost[postId][commentId];
-        uint256 lastIndex = commentIdsByPost[postId].length - 1;
-        if (i != lastIndex && commentIdsByPost[postId].length > 1) {
-            uint256 last = commentIdsByPost[postId][lastIndex];
-            commentIdsByPost[postId][i] = last;
-            commentIndexByPost[postId][last] = i;
-        }
-        commentIdsByPost[postId].pop();
-        delete commentIndexByPost[postId][commentId];
-
         delete commentById[commentId];
-
-        uint256 j = commentIndexByOwner[msg.sender][commentId];
-        lastIndex = commentIdsByOwner[msg.sender].length - 1;
-        if (j != lastIndex && commentIdsByOwner[msg.sender].length > 1) {
-            uint256 last = commentIndexByOwner[msg.sender][lastIndex];
-            commentIdsByOwner[msg.sender][j] = last;
-            commentIndexByOwner[msg.sender][last] = j;
-        }
-        commentIdsByOwner[msg.sender].pop();
-        delete commentIndexByOwner[msg.sender][commentId];
-
-        postById[postId].commentsCount -= 1;
 
         emit StateChange(commentId, msg.sender, block.timestamp, Action.Delete);
     }
@@ -334,9 +309,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
             commentIdsByOwner[_comment.from].push(id);
             _commentIds.increment();
             postById[postId].commentsCount += 1;
-
-            commentIndexByPost[postId][id] = (commentIdsByPost[postId].length - 1);
-            commentIndexByOwner[author][id] = (commentIdsByOwner[author].length - 1);
 
             emit StateChange(postId, author, block.timestamp, Action.Comment);
     }
