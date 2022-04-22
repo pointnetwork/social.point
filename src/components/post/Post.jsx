@@ -82,7 +82,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent, re
       <div className="postWrapper">
         <div className="postTop">
           <div className="postTopLeft">
-            <Link to={`/profile/${walletAddress}`}>
+            <Link to={`/profile/${post.from}`}>
                 <img
                     src={profileImg}
                     alt=""

@@ -2,6 +2,7 @@ import './comments.css'
 import { format } from "timeago.js";
 import { useState } from "react";
 import { useAppContext } from '../../context/AppContext';
+import { Link } from "wouter";
 import CommentEditor from './CommentEditor';
  
 const Comment = ({ postId, comment, reloadComments }) => {
@@ -29,11 +30,11 @@ const Comment = ({ postId, comment, reloadComments }) => {
         <div className="comment">
         { walletAddress === comment.from ? 
           [ 
-            <span className="commentFrom">You commented: </span>, date, 
+            <span className="commentFrom"><Link to={`/profile/${comment.from}`}>You</Link> commented: </span>, date, 
             <span className="commentEditText" onClick={toggleEditComment}>Edit</span>,
             <span className="commentDeleteText" onClick={deleteComment}>Delete</span>
           ]: 
-          [<span className="commentUsername">{comment.identity} commented</span>, date] 
+          [<span className="commentUsername"><Link to={`/profile/${comment.from}`}>{comment.identity}</Link> commented:</span>, date] 
         }
         <br/>            
         <p className="commentText">{comment.contents}</p>
