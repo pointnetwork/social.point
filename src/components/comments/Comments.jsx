@@ -31,27 +31,14 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
       setComments(comments);
       setLoading(false);
     }
-
-    const renderCommentsImmediate = (newCommentContent) => {
-      console.log('Using renderCommentsImmediate function.')
+    
+    const reloadComments = async() => {
       setLoading(true);
-      const updatedComments = [...comments];
-      const newCommentId = comments.length + 1;
-      const newComment = {id: newCommentId, from: walletAddress, contents: newCommentContent, createdAt: Date.now()}
-      updatedComments.push(newComment);
-      setComments(updatedComments);
-      setCommentsCount(parseInt(commentsCount) + 1);
+      await new Promise((res, rej) => setTimeout(res, 1000));
+      await getComments();
       setLoading(false);
     }
 
-    const renderCommentContentImmediate = async(commentId, contents) => {
-      setLoading(true);
-      const updatedComments = [...comments];
-      updatedComments.filter((comment) => comment.id === commentId)[0].contents = contents;
-      setComments(updatedComments);
-      setLoading(false);
-    }
-  
     useEffect(() => {
         getComments()
     }, [postId])
@@ -86,7 +73,8 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
           await window.point.contract.send({contract: 'PointSocial', method: 'addCommentToPost', params: [postId, storageId]});
           setSaving(false);
           // calling renderCommentsImmediate instead of fetching the comments due to issues with fetching content too soon from Arweave after posting.
-          renderCommentsImmediate(contents);
+          //renderCommentsImmediate(contents);
+          reloadComments();
           setContents('');
           // await getComments();
       } catch (err) {
@@ -95,8 +83,11 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
       }
     };
 
+    const loadingBlock = <Box sx={{ display: 'flex' }}><CircularProgress /></Box>;
+    
     return (
       <div className="commentWrapper">
+        {loading && loadingBlock}
         <form className="commentBottom" onSubmit={submitHandler}>
           <textarea
               id="contents"
@@ -114,13 +105,13 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
           </button>
         </form>
         <hr className="commentHr" />
-        {loading && <Box sx={{ display: 'flex' }}>
-          <CircularProgress />
-        </Box>}
         {(!loading && comments.length === 0) && 'No comments yet. Be the first!'}
-        {comments.map((comment) => (
-          [ <Comment key={comment.id} comment={comment} renderCommentContentImmediate={renderCommentContentImmediate}/>, <hr className="commentHr" /> ]
-        ))}
+        {comments.map((comment) => ([ <Comment key={comment.id} 
+                   postId={postId} 
+                   comment={comment} 
+                  reloadComments={reloadComments}/>, 
+          <hr className="commentHr" /> 
+        ]))}
       </div>
     )
 }
