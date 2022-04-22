@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+
 contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     using Counters for Counters.Counter;
     Counters.Counter internal _postIds;
@@ -112,26 +113,27 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         require(commentIdsByPost[postId].length == 0, "ERROR_CANNOT_DELETE_POST_WITH_COMMENTS");
 
         uint256 i = postIdIndexes[postId];
-
-        if (i != postIds.length - 1 && postIds.length > 1) {
-            uint256 last =  postIds[postIds.length - 1];
+        uint256 lastIndex = postIds.length - 1;
+        if (i != lastIndex && postIds.length > 1) {
+            uint256 last = postIds[lastIndex];
             postIds[i] = last;
             postIdIndexes[last] = i;
         }
         postIds.pop();
         delete postIdIndexes[postId];
 
-        uint256 j = postIdIndexByOwner[msg.sender][postId];
+        delete postById[postId];
 
-        if (j != postIdsByOwner[msg.sender].length - 1 && postIdsByOwner[msg.sender].length > 1) {
-            uint256 last =  postIdsByOwner[msg.sender][postIds.length - 1];
+        uint256 j = postIdIndexByOwner[msg.sender][postId];
+        lastIndex = postIdsByOwner[msg.sender].length - 1;
+
+        if (j != lastIndex && postIdsByOwner[msg.sender].length > 1) {
+            uint256 last =  postIdsByOwner[msg.sender][lastIndex];
             postIdsByOwner[msg.sender][j] = last;
             postIdIndexByOwner[msg.sender][last] = j;
         }
         postIdsByOwner[msg.sender].pop();
         delete postIdIndexByOwner[msg.sender][postId];
-
-        delete postById[postId];
 
         emit StateChange(postId, msg.sender, block.timestamp, Action.Delete);
     }
