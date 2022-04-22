@@ -27,10 +27,8 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent, re
 
   const deletePost = async () => {
     try {
-      console.log(`Deleting post ${post.id}`);
-      const result = await window.point.contract.send({contract: 'PointSocial', method: 'deletePost', params: [post.id]});
-      console.log(result);
-      await reloadPosts(post.id);
+      await window.point.contract.send({contract: 'PointSocial', method: 'deletePost', params: [post.id]});
+      await reloadPosts();
     } catch (e) {
       console.error('Error deleting post: ', e.message);
     }
@@ -80,7 +78,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent, re
   const postDelete = (walletAddress === post.from) && <span className="postDeleteText" onClick={deletePost}>Delete</span>
 
   return (
-    <div className="post">
+    <div className="post" id={post.id}>
       <div className="postWrapper">
         <div className="postTop">
           <div className="postTopLeft">

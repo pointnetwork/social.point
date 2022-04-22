@@ -6,27 +6,43 @@ import Post from "../post/Post";
 import Share from "../share/Share";
 import Identity from "../identity/Identity";
 import LoadingSpinner from '../loading/LoadingSpinner';
+
+import Backdrop from '@material-ui/core/Backdrop';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Pagination from '@material-ui/lab/Pagination';
+
+import { makeStyles } from '@material-ui/core/styles';
+
 const EMPTY_TEXT = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const EMPTY_MEDIA = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const NUM_POSTS_PER_CALL = 9;
 
-const NUM_POSTS_PER_CALL = 20;
+const useStyles = makeStyles((theme) => ({
+  backdrop: {
+    zIndex: theme.zIndex.drawer + 1,
+    color: '#fff',
+  },
+  pagination: {
+    '& > *': {
+      marginTop: theme.spacing(2),
+      align: 'center', 
+      alignItems: 'center',
+      justifyContent: 'center' 
+    },
+  },
+}));
 
 const Feed = ({account}) => {
-  const {observe} = useInView({
-    onEnter: async({observe,unobserve}) => {
-      if(numPosts === posts.length) return;
-      unobserve();
-      await getPosts();
-      observe();
-    }
-  })
+
+  const classes = useStyles();
 
   const [posts, setPosts] = useState([])
-  const [numPosts, setNumPosts] = useState()
+  const [numPosts, setNumPosts] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [feedError, setFeedError] = useState(undefined);
   const { walletAddress } = useAppContext();
-
+  
   const compareByTimestamp = ( post1, post2 ) => {
     // sorts accending (newest first)
     if ( post1.createdAt < post2.createdAt ){
@@ -41,44 +57,30 @@ const Feed = ({account}) => {
   useEffect(()=>{
     console.log('@@@@@@@@@@posts',posts)
     console.log('@@@@@@@@@@account',account)
-  },[posts,account])
+  },[posts,account]);
+
+  useEffect(() => {
+     getPostsLength();
+     getPosts();
+  }, []);
 
   useEffect(()=>{
-    getPostsLength();
-  },[])
+    reloadPosts();
+  },[page]);
 
   const getPostsLength = async() => {
-    const response = account
-    ? await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsByOwnerLength', params: [account]}) :
-    await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsLength', params:[]})
-
+    const response = account? 
+      await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsByOwnerLength', params: [account]}) :
+      await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsLength', params:[]});
     setNumPosts(Number(response.data));
-  }
-
-  const getPosts = async () => {
-    setLoading(true);
-    const posts = await fetchPosts();
-    posts.sort(compareByTimestamp)
-    setPosts(prev => [...prev,...posts]);
-    setLoading(false);
-  }
-
-  const renderPostsImmediate = ({contents,image}) => {
-    setLoading(true);
-    let updatedPosts = [...posts];
-    let newPostId = posts.length + 1;
-    const newPost = {id: newPostId, from: walletAddress, image, contents, createdAt: Date.now(), likesCount:0, commentsCount:0}
-    updatedPosts.push(newPost);
-    updatedPosts.sort(compareByTimestamp)
-    setPosts(updatedPosts);
-    setLoading(false);
   }
 
   const fetchPosts = async () => {
     try {
+
       const response = account
-        ? await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPostsByOwner', params: [account,posts.length,NUM_POSTS_PER_CALL]}) :
-        await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPosts', params:[posts.length,NUM_POSTS_PER_CALL]})
+        ? await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPostsByOwner', params: [account, ((page - 1) * NUM_POSTS_PER_CALL),NUM_POSTS_PER_CALL]}) :
+        await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPosts', params:[((page - 1) * NUM_POSTS_PER_CALL),NUM_POSTS_PER_CALL]})
 
       const _posts = response.data.filter(r => (r[4] !== "0")).map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
           {id, from, contents, image, createdAt: createdAt*1000, likesCount, commentsCount}
@@ -106,6 +108,14 @@ const Feed = ({account}) => {
     }
   }
 
+  const getPosts = async () => {
+    setLoading(true);
+    const posts = await fetchPosts();
+    posts.sort(compareByTimestamp)
+    setPosts(posts);
+    setLoading(false);
+  }
+
   // function reloads the post by id and updates the likes count of the object in state
   const reloadPostLikesCount = async(id) => {
     let post = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [id]});
@@ -125,26 +135,36 @@ const Feed = ({account}) => {
     setPosts(updatedPosts);
   }
 
-  const reloadPosts = async(id) => {
+  const reloadPosts = async() => {
     setLoading(true);
-    const updatedPosts = [...posts].filter((post) => post.id !== id);
-    setPosts(updatedPosts);
-    setLoading(false);
-  } 
+    await new Promise((res, rej) => setTimeout(res, 1000));
+    await getPostsLength();
+    await getPosts();    
+  }
+
+  const changePage = (event, value) => {
+    setPage(value);
+  }
 
   return (
     <div className="feed">
       <div className="feedWrapper">
-        {!account && <div><Identity /><Share renderPostsImmediate={renderPostsImmediate} getPosts={getPosts} /></div>}
+        {!account && <div><Identity /><Share reloadPosts={reloadPosts}/></div>}
         {(!loading && feedError) && <span className='error'>Error loading feed: {feedError.message}. Did you deploy the contract sucessfully?</span>}
         {(!loading && !feedError && posts.length === 0) && <span className='no-post-to-show'>No posts made yet!</span>}
         {posts.map((p) => (
           <Post key={p.id} post={p} reloadPostLikesCount={reloadPostLikesCount} reloadPostContent={reloadPostContent} reloadPosts={reloadPosts}/>
-          ))}
-        <div ref={observe}>
-        {loading && <LoadingSpinner />}
-        </div>
+        ))}
       </div>
+      {
+        numPosts > 0 &&
+        <div className={classes.pagination}>
+          <Pagination count={Math.ceil(numPosts/NUM_POSTS_PER_CALL)} color="primary" size="large" onChange={changePage}/>
+        </div>
+      }
+      <Backdrop className={classes.backdrop} open={loading}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
     </div>
   );
 }
