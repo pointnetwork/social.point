@@ -146,7 +146,7 @@ export default function Post({ post, reloadPostCounts, reloadPostContent, render
         <div className="postWrapper">
           <div className="postTop">
             <div className="postTopLeft">
-              <Link to={`/profile/${walletAddress}`}>
+              <Link to={`/profile/${post.from}`}>
                   <img
                       src={profileImg}
                       alt=""
