@@ -4,8 +4,17 @@ import { useAppContext } from '../../context/AppContext';
 import Comment from './Comment'
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Box from '@material-ui/core/Box';
+import { makeStyles } from '@material-ui/core/styles';
 
-const Comments = ({ postId, commentsCount, setCommentsCount }) => {
+const useStyles = makeStyles((theme) => ({
+  root: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  }
+}));
+
+const Comments = ({ postId, commentsCount, setCommentsCount, reloadPostCounters }) => {
     const DEFAULT_BTN_LABEL = 'Comment'
     const [comments, setComments] = useState([])
     const [contents, setContents] = useState()
@@ -13,6 +22,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
     const [btnEnabled, setBtnEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
     const { walletAddress } = useAppContext();
+    const classes = useStyles();
 
     const onContentsChange = event => {
       let newContents = event.target.value;
@@ -27,7 +37,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
 
     const getComments = async () => {
       setLoading(true);
-      const comments = await fetchComments()
+      const comments = await fetchComments();
       setComments(comments);
       setLoading(false);
     }
@@ -35,6 +45,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
     const reloadComments = async() => {
       setLoading(true);
       await new Promise((res, rej) => setTimeout(res, 1000));
+      await reloadPostCounters();
       await getComments();
       setLoading(false);
     }
@@ -46,7 +57,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
     const fetchComments = async () => {
         const response = await window.point.contract.call({contract: 'PointSocial', method: 'getAllCommentsForPost', params: [postId]});
 
-        const comments = response.data.map(([id, from, contents, createdAt]) => (
+        const comments = response.data.filter(r => (parseInt(r[3]) !== 0)).map(([id, from, contents, createdAt]) => (
             {id, from, contents, createdAt: createdAt*1000}
           )
         )
@@ -83,35 +94,37 @@ const Comments = ({ postId, commentsCount, setCommentsCount }) => {
       }
     };
 
-    const loadingBlock = <Box sx={{ display: 'flex' }}><CircularProgress /></Box>;
+    const loadingBlock = <div className={classes.root}><CircularProgress/></div>;
     
     return (
       <div className="commentWrapper">
-        {loading && loadingBlock}
-        <form className="commentBottom" onSubmit={submitHandler}>
-          <textarea
-              id="contents"
-              name="contents"
-              placeholder={"Any comment?"}
-              maxLength="300"
-              rows="3"
-              cols="50"              
-              className="commentCorners"
-              onChange={onContentsChange}
-              value={contents}>
-          </textarea>
-          <button className="commentButton" type="submit" disabled={!btnEnabled}>
-            {btnLabel}
-          </button>
-        </form>
-        <hr className="commentHr" />
-        {(!loading && comments.length === 0) && 'No comments yet. Be the first!'}
-        {comments.map((comment) => ([ <Comment key={comment.id} 
-                   postId={postId} 
-                   comment={comment} 
-                  reloadComments={reloadComments}/>, 
-          <hr className="commentHr" /> 
-        ]))}
+        {loading? loadingBlock:  
+          [<form className="commentBottom" onSubmit={submitHandler}>
+            <textarea
+                id="contents"
+                name="contents"
+                placeholder={"Any comment?"}
+                maxLength="300"
+                rows="3"
+                cols="50"              
+                className="commentCorners"
+                onChange={onContentsChange}
+                value={contents}>
+            </textarea>
+            <button className="commentButton" type="submit" disabled={!btnEnabled}>
+              {btnLabel}
+            </button>
+          </form>,
+          <hr className="commentHr" />,
+          (!loading && comments.length === 0) && 'No comments yet. Be the first!',
+          comments.filter(c => c.createdAt > 0).map((comment) => ([ 
+            <Comment key={postId+comment.id}
+                     id={postId+comment.id}
+                     postId={postId} 
+                     comment={comment} 
+                     reloadComments={reloadComments}/>,<hr className="commentHr"/> ])
+          )]
+        }
       </div>
     )
 }

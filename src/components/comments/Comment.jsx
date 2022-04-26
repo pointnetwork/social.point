@@ -5,13 +5,30 @@ import { useAppContext } from '../../context/AppContext';
 import { Link } from "wouter";
 import CommentEditor from './CommentEditor';
  
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert from '@material-ui/lab/Alert';
+
+function Alert(props) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
+
 const Comment = ({ postId, comment, reloadComments }) => {
     const { walletAddress } = useAppContext();
     const [editComment, setEditComment] = useState(false);
-
+    const [alert, setAlert] = useState(false);
+    const [commentError, setCommentError] = useState(undefined);
+  
     const toggleEditComment = () => {
         setEditComment(!editComment);
     }
+
+    const handleAlert = (event, reason) => {
+      if (reason === 'clickaway') {
+        return;
+      }
+      setAlert(false);
+    };  
+  
 
     const deleteComment = async () => {
       try {
@@ -19,6 +36,8 @@ const Comment = ({ postId, comment, reloadComments }) => {
         await reloadComments();
       } catch (e) {
         console.error('Error deleting post: ', e.message);
+        setCommentError('Error deleting post: ', e.message);
+        setAlert(true);
       }  
     }
 
@@ -28,7 +47,7 @@ const Comment = ({ postId, comment, reloadComments }) => {
     return (
         (editComment)? editor :
         <div className="comment">
-        { walletAddress === comment.from ? 
+        { walletAddress === comment.from ?
           [ 
             <span className="commentFrom"><Link to={`/profile/${comment.from}`}>You</Link> commented: </span>, date, 
             <span className="commentEditText" onClick={toggleEditComment}>Edit</span>,
@@ -38,7 +57,12 @@ const Comment = ({ postId, comment, reloadComments }) => {
         }
         <br/>            
         <p className="commentText">{comment.contents}</p>
-      </div>
+        <Snackbar open={alert} autoHideDuration={6000} onClose={handleAlert}>
+        <Alert onClose={handleAlert} severity="error">
+        { commentError }
+        </Alert>
+        </Snackbar>
+        </div>
     )
 }
 
