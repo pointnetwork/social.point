@@ -5,42 +5,55 @@ import useInView from 'react-cool-inview'
 import Post from "../post/Post";
 import Share from "../share/Share";
 import Identity from "../identity/Identity";
-import LoadingSpinner from '../loading/LoadingSpinner';
 
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import Pagination from '@material-ui/lab/Pagination';
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert from '@material-ui/lab/Alert';
+
+import unionWith from "lodash/unionWith";
+import isEqual from "lodash/isEqual";
 
 import { makeStyles } from '@material-ui/core/styles';
 
 const EMPTY_TEXT = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const EMPTY_MEDIA = '0x0000000000000000000000000000000000000000000000000000000000000000';
-const NUM_POSTS_PER_CALL = 9;
+const NUM_POSTS_PER_CALL = 20;
 
 const useStyles = makeStyles((theme) => ({
+  root: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
     color: '#fff',
-  },
-  pagination: {
-    '& > *': {
-      marginTop: theme.spacing(2),
-      align: 'center', 
-      alignItems: 'center',
-      justifyContent: 'center' 
-    },
-  },
+  },  
 }));
+
+function Alert(props) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
 
 const Feed = ({account}) => {
 
+  const {observe} = useInView({
+    onEnter: async({observe,unobserve}) => {
+      if(numPosts === posts.length) return;
+      unobserve();
+      await getPosts();
+      observe();
+    }
+  });
   const classes = useStyles();
-
   const [posts, setPosts] = useState([])
-  const [numPosts, setNumPosts] = useState(0);
-  const [page, setPage] = useState(1);
+  const [numPosts, setNumPosts] = useState();
   const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
   const [feedError, setFeedError] = useState(undefined);
+  const [alert, setAlert] = useState(false);
+  
   const { walletAddress } = useAppContext();
   
   const compareByTimestamp = ( post1, post2 ) => {
@@ -61,28 +74,29 @@ const Feed = ({account}) => {
 
   useEffect(() => {
      getPostsLength();
-     getPosts();
   }, []);
 
-  useEffect(()=>{
-    reloadPosts();
-  },[page]);
+  const handleAlert = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setAlert(false);
+  };
 
   const getPostsLength = async() => {
     const response = account? 
       await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsByOwnerLength', params: [account]}) :
       await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsLength', params:[]});
-    setNumPosts(Number(response.data));
+      console.log(`There are ${Number(response.data)} posts`);
+      setNumPosts(Number(response.data));
   }
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (onlyNew = false) => {
     try {
-
       const response = account
-        ? await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPostsByOwner', params: [account, ((page - 1) * NUM_POSTS_PER_CALL),NUM_POSTS_PER_CALL]}) :
-        await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPosts', params:[((page - 1) * NUM_POSTS_PER_CALL),NUM_POSTS_PER_CALL]})
-
-      const _posts = response.data.filter(r => (r[4] !== "0")).map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
+        ? await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPostsByOwner', params: [account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL]}) :
+        await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPosts', params:[onlyNew?0:posts.length,NUM_POSTS_PER_CALL]})
+      const _posts = response.data.filter(r => (parseInt(r[4]) !== 0)).map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
           {id, from, contents, image, createdAt: createdAt*1000, likesCount, commentsCount}
         )
       )
@@ -105,14 +119,18 @@ const Feed = ({account}) => {
       console.error('Error loading feed: ', e.message);
       setLoading(false);
       setFeedError(e);
+      setAlert(true);
     }
   }
 
-  const getPosts = async () => {
+  const getPosts = async (loadNew = false) => {
     setLoading(true);
-    const posts = await fetchPosts();
-    posts.sort(compareByTimestamp)
-    setPosts(posts);
+    const posts = await fetchPosts(loadNew);
+    setPosts(prev => {
+      const result = unionWith(prev, posts, isEqual);
+      result.sort(compareByTimestamp);
+      return result;
+    });
     setLoading(false);
   }
 
@@ -135,36 +153,44 @@ const Feed = ({account}) => {
     setPosts(updatedPosts);
   }
 
-  const reloadPosts = async() => {
-    setLoading(true);
-    await new Promise((res, rej) => setTimeout(res, 1000));
-    await getPostsLength();
-    await getPosts();    
+  const reloadPosts = async () => {
+    setPageLoading(true);
+    await getPosts(true);
+    setPageLoading(false);
   }
 
-  const changePage = (event, value) => {
-    setPage(value);
+  const renderDeletedPostImmediate = async (postId) => {
+    setLoading(true);
+    const updatedPosts = [...posts];
+    updatedPosts.filter((post) => post.id === postId)[0].createdAt = 0;
+    setLoading(false);
   }
 
   return (
     <div className="feed">
       <div className="feedWrapper">
         {!account && <div><Identity /><Share reloadPosts={reloadPosts}/></div>}
-        {(!loading && feedError) && <span className='error'>Error loading feed: {feedError.message}. Did you deploy the contract sucessfully?</span>}
         {(!loading && !feedError && posts.length === 0) && <span className='no-post-to-show'>No posts made yet!</span>}
-        {posts.map((p) => (
-          <Post key={p.id} post={p} reloadPostLikesCount={reloadPostLikesCount} reloadPostContent={reloadPostContent} reloadPosts={reloadPosts}/>
+        {posts.filter(p => p.createdAt > 0).map((p) => (
+          <Post 
+            key={p.id}
+            post={p}
+            reloadPostLikesCount={reloadPostLikesCount}
+            reloadPostContent={reloadPostContent}
+            renderDeletedPostImmediate={renderDeletedPostImmediate}/>
         ))}
-      </div>
-      {
-        numPosts > 0 &&
-        <div className={classes.pagination}>
-          <Pagination count={Math.ceil(numPosts/NUM_POSTS_PER_CALL)} color="primary" size="large" onChange={changePage}/>
+        <div ref={observe} className={classes.root}>
+          {loading &&<CircularProgress/>}
         </div>
-      }
-      <Backdrop className={classes.backdrop} open={loading}>
+      </div>
+      <Backdrop className={classes.backdrop} open={pageLoading}>
         <CircularProgress color="inherit" />
       </Backdrop>
+      <Snackbar open={alert} autoHideDuration={6000} onClose={handleAlert}>
+        <Alert onClose={handleAlert} severity="error">
+          Error loading feed: {feedError && feedError.message}. Did you deploy the contract sucessfully?
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

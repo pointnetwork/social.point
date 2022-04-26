@@ -55,12 +55,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
     address private _migrator;
 
-    mapping(uint256 => uint256) private postIdIndexes;
-    mapping(address => mapping(uint256 => uint256)) private postIdIndexByOwner;
-
-    mapping(uint256 => mapping(uint256 => uint256)) private commentIndexByPost;
-    mapping(address => mapping(uint256 => uint256)) private commentIndexByOwner;
-
     enum Action {Migrator, Post, Like, Comment, Edit, Delete}
 
     function initialize() public initializer {
@@ -90,21 +84,18 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
             0
         );
         postIds.push(newPostId);
-        postIdIndexes[newPostId] = (postIds.length - 1);
         postById[newPostId] = _post;
         postIdsByOwner[msg.sender].push(newPostId);
-        postIdIndexByOwner[msg.sender][newPostId] = (postIdsByOwner[msg.sender].length - 1);
 
         emit StateChange(newPostId, msg.sender, block.timestamp, Action.Post);
     }
 
     function editPost(uint256 postId, bytes32 contents, bytes32 image) public {
-        Post storage post = postById[postId];
-        require(post.createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
-        require(msg.sender == post.from, "ERROR_CANNOT_EDIT_OTHERS_POSTS");
+        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+        require(msg.sender == postById[postId].from, "ERROR_CANNOT_EDIT_OTHERS_POSTS");
 
-        post.contents = contents;
-        post.image = image;
+        postById[postId].contents = contents;
+        postById[postId].image = image;
 
         emit StateChange(postId, msg.sender, block.timestamp, Action.Edit);
     }
@@ -113,30 +104,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
         require(msg.sender == postById[postId].from, "ERROR_CANNOT_DELETE_OTHERS_POSTS");
         require(commentIdsByPost[postId].length == 0, "ERROR_CANNOT_DELETE_POST_WITH_COMMENTS");
-
-        uint256 i = postIdIndexes[postId];
-        uint256 lastIndex = postIds.length - 1;
-        if (i != lastIndex && postIds.length > 1) {
-            uint256 last = postIds[lastIndex];
-            postIds[i] = last;
-            postIdIndexes[last] = i;
-        }
-        postIds.pop();
-        delete postIdIndexes[postId];
-
+        
         delete postById[postId];
-
-        uint256 j = postIdIndexByOwner[msg.sender][postId];
-        lastIndex = postIdsByOwner[msg.sender].length - 1;
-
-        if (j != lastIndex && postIdsByOwner[msg.sender].length > 1) {
-            uint256 last =  postIdsByOwner[msg.sender][lastIndex];
-            postIdsByOwner[msg.sender][j] = last;
-            postIdIndexByOwner[msg.sender][last] = j;
-        }
-        postIdsByOwner[msg.sender].pop();
-        delete postIdIndexByOwner[msg.sender][postId];
-
+        
         emit StateChange(postId, msg.sender, block.timestamp, Action.Delete);
     }
 
@@ -339,9 +309,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
             postIdsByOwner[_post.from].push(id);
             postById[_post.id] = _post;
             _postIds.increment();
-
-            postIdIndexes[id] = (postIds.length - 1);
-            postIdIndexByOwner[msg.sender][id] = (postIdsByOwner[msg.sender].length - 1);
 
             emit StateChange(id, author, block.timestamp, Action.Post);
     }

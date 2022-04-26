@@ -4,6 +4,13 @@ import { useRef, useState } from "react";
 import profileImg from '../../assets/profile-pic.jpg';
 import { useAppContext } from '../../context/AppContext';
 
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert from '@material-ui/lab/Alert';
+
+function Alert(props) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
+
 export default function Share({reloadPosts}) {
   const DEFAULT_BTN_LABEL = 'Share'
   const EMPTY_IMAGE = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -11,6 +18,7 @@ export default function Share({reloadPosts}) {
   const [selectedFile, setSelectedFile] = useState();
   const [contents, setContents] = useState('');
   const [btnLabel, setBtnLabel] = useState(DEFAULT_BTN_LABEL);
+  const [alert, setAlert] = useState(false);
   const [btnEnabled, setBtnEnabled] = useState(false);
   const [shareError, setShareError] = useState(undefined);
   const { identity } = useAppContext();
@@ -21,13 +29,20 @@ export default function Share({reloadPosts}) {
     let fileToUpload = event.target.files[0];
     if(fileToUpload.type.startsWith('image') || fileToUpload.type.startsWith('video') ) {
       if (fileToUpload.size > 100 * 1024 * 1024){
-        alert('Point Social only supports image and video until 100 MB. Please change to a samller image or video file!')  
+        alert('Point Social only supports image and video until 100 MB. Please change to a smaller image or video file!')  
       }
       setSelectedFile(event.target.files[0]);
       setBtnEnabled(true);
     } else {
       alert('Point Social only supports image and video uploads for now. Please change to an image or video file!')
     }
+  };
+
+  const handleAlert = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setAlert(false);
   };
 
   const onContentsChange = event => {
@@ -71,6 +86,7 @@ export default function Share({reloadPosts}) {
       fileInputRef.current.value = null
       setBtnEnabled(false);
       setShareError(e);
+      setAlert(true);
     }
   };
 
@@ -113,8 +129,12 @@ export default function Share({reloadPosts}) {
             {btnLabel}
           </button>
         </form>
-        {shareError && <div className='error'>Error sharing post: {shareError.message}. Did you deploy the contract sucessfully?</div>}
       </div>
+      <Snackbar open={alert} autoHideDuration={6000} onClose={handleAlert}>
+        <Alert onClose={handleAlert} severity="error">
+        Error sharing post: {shareError && shareError.message}. Did you deploy the contract sucessfully?
+        </Alert>
+      </Snackbar>
     </div>
   );
 }
