@@ -103,7 +103,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     function deletePost(uint256 postId) public {
         require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
         require(msg.sender == postById[postId].from, "ERROR_CANNOT_DELETE_OTHERS_POSTS");
-        require(commentIdsByPost[postId].length == 0, "ERROR_CANNOT_DELETE_POST_WITH_COMMENTS");
+        require(postById[postId].commentsCount == 0, "ERROR_CANNOT_DELETE_POST_WITH_COMMENTS");
         
         delete postById[postId];
         
@@ -199,10 +199,11 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         emit StateChange(commentId, msg.sender, block.timestamp, Action.Edit);
     }
 
-    function deleteCommentForPost(uint256 commentId) public {
+    function deleteCommentForPost(uint256 postId, uint256 commentId) public {
         require(commentById[commentId].createdAt != 0, "ERROR_COMMENT_DOES_NOT_EXISTS");
         require(msg.sender == commentById[commentId].from, "ERROR_CANNOT_DELETE_OTHERS_COMMENTS");
 
+        postById[postId].commentsCount -= 1;
         delete commentById[commentId];
 
         emit StateChange(commentId, msg.sender, block.timestamp, Action.Delete);
