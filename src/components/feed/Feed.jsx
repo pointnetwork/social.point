@@ -87,7 +87,6 @@ const Feed = ({account}) => {
     const response = account? 
       await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsByOwnerLength', params: [account]}) :
       await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsLength', params:[]});
-      console.log(`There are ${Number(response.data)} posts`);
       setNumPosts(Number(response.data));
   }
 
@@ -135,12 +134,13 @@ const Feed = ({account}) => {
   }
 
   // function reloads the post by id and updates the likes count of the object in state
-  const reloadPostLikesCount = async(id) => {
+  const reloadPostCounts = async(id) => {
     let post = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [id]});
     const updatedPosts = [...posts];
-    const updatedLikesCount = post.data[5];
-    updatedPosts.filter((post) => post.id === id)[0].likesCount = updatedLikesCount;
+    updatedPosts.filter((post) => post.id === id)[0].likesCount = post.data[5];
+    updatedPosts.filter((post) => post.id === id)[0].commentsCount = post.data[6];
     setPosts(updatedPosts);
+    return [post.data[5], post.data[6]];
   }
 
   //TODO: temporary fix, it should wait until transaction is confirmed and read from smartcontract
@@ -175,7 +175,7 @@ const Feed = ({account}) => {
           <Post 
             key={p.id}
             post={p}
-            reloadPostLikesCount={reloadPostLikesCount}
+            reloadPostCounts={reloadPostCounts}
             reloadPostContent={reloadPostContent}
             renderDeletedPostImmediate={renderDeletedPostImmediate}/>
         ))}

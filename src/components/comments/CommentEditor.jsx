@@ -1,7 +1,7 @@
 import './comments.css'
 import { useState } from "react";
 
-const CommentEditor = ({ commentId, content, toggleEditComment, renderCommentContentImmediate }) => {
+const CommentEditor = ({ commentId, content, toggleEditComment, reloadComments }) => {
     const DEFAULT_BTN_LABEL = 'Comment'
 
     const [btnLabel, setBtnLabel] = useState(DEFAULT_BTN_LABEL);
@@ -42,8 +42,8 @@ const CommentEditor = ({ commentId, content, toggleEditComment, renderCommentCon
             await window.point.contract.send({contract: 'PointSocial', method: 'editCommentForPost', params: [commentId, storageId]});
             setSaving(false);
             // calling renderCommentsImmediate instead of fetching the comments due to issues with fetching content too soon from Arweave after posting.
-            //renderCommentsImmediate(contents);
-            renderCommentContentImmediate(commentId, contents);
+            // PD: using a timeout of 1000 apparently works
+            reloadComments();
             setContents('');
             toggleEditComment(false);
         } catch (err) {

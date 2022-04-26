@@ -1,5 +1,5 @@
 import "./post.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppContext } from '../../context/AppContext';
 import { format } from "timeago.js";
 import { Link } from "wouter";
@@ -25,7 +25,7 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-export default function Post({ post, reloadPostLikesCount, reloadPostContent, renderDeletedPostImmediate }) {
+export default function Post({ post, reloadPostCounts, reloadPostContent, renderDeletedPostImmediate }) {
   const EMPTY_MEDIA = '0x0000000000000000000000000000000000000000000000000000000000000000';
   const [showComments, setShowComments] = useState(false);
   const [editPost, setEditPost] = useState(false);
@@ -72,7 +72,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent, re
     try {
       setLoading(true);
       await window.point.contract.send({contract: 'PointSocial', method: 'addLikeToPost', params: [post.id]});
-      reloadPostLikesCount(post.id);
+      reloadPostCounts(post.id);
     } catch (e) {
       console.error('Error updating likes: ', e.message);
       setPostError(`Error updating likes: ${e.message}`);
@@ -88,6 +88,22 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent, re
     try {
       setLoading(true);
       reloadPostContent(post.id, contents, image);
+    }
+    catch(e) {
+      console.error('Error updating the post: ', e.message);
+      setPostError(`Error updating the post: ${e.message}`);
+      setAlert(true);
+    }
+    finally {
+      setLoading(false);
+    }
+  }
+
+  const reloadPostCounters = async () => {
+    try {
+      setLoading(true);
+      const [likes, comments] = await reloadPostCounts(post.id);
+      setCommentsCount(comments);
     }
     catch(e) {
       console.error('Error updating the post: ', e.message);
@@ -130,7 +146,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent, re
         <div className="postWrapper">
           <div className="postTop">
             <div className="postTopLeft">
-              <Link to={`/profile/${walletAddress}`}>
+              <Link to={`/profile/${post.from}`}>
                   <img
                       src={profileImg}
                       alt=""
@@ -167,7 +183,7 @@ export default function Post({ post, reloadPostLikesCount, reloadPostContent, re
             </div>
           </div>
           <div className="comments">
-            {showComments && <Comments postId={post.id} commentsCount={commentsCount} setCommentsCount={setCommentsCount} />}
+            {showComments && <Comments postId={post.id} commentsCount={commentsCount} setCommentsCount={setCommentsCount} reloadPostCounters={reloadPostCounters}/>}
           </div>
         </div>
       }
