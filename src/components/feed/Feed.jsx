@@ -140,6 +140,7 @@ const Feed = ({account}) => {
     updatedPosts.filter((post) => post.id === id)[0].likesCount = post.data[5];
     updatedPosts.filter((post) => post.id === id)[0].commentsCount = post.data[6];
     setPosts(updatedPosts);
+    return [post.data[5], post.data[6]];
   }
 
   //TODO: temporary fix, it should wait until transaction is confirmed and read from smartcontract
