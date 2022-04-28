@@ -15,7 +15,7 @@ npm run build
 
 Now a `public` folder will be created containing the deployable built site. 
 
-Start your local Point Node and deploy the Zapp by following the instructions [here](https://pointnetwork.github.io/docs/build-run-dev-node-and-services).
+Start your local Point Node and deploy the Zapp by following the instructions [here](https://pointnetwork.github.io/docs/build-zapp-dev-environment-direct-install).
 
 ## Rebuild on changes using watch
 
