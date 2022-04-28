@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+
 contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     using Counters for Counters.Counter;
     Counters.Counter internal _postIds;
@@ -54,7 +55,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
     address private _migrator;
 
-    enum Action {Migrator, Post, Like, Comment, Edit}
+    enum Action {Migrator, Post, Like, Comment, Edit, Delete}
 
     function initialize() public initializer {
         __Ownable_init();
@@ -90,14 +91,23 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     }
 
     function editPost(uint256 postId, bytes32 contents, bytes32 image) public {
-        Post storage post = postById[postId];
-        require(post.createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
-        require(msg.sender == post.from, "ERROR_CANNOT_EDIT_OTHERS_POSTS");
+        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+        require(msg.sender == postById[postId].from, "ERROR_CANNOT_EDIT_OTHERS_POSTS");
 
-        post.contents = contents;
-        post.image = image;
+        postById[postId].contents = contents;
+        postById[postId].image = image;
 
         emit StateChange(postId, msg.sender, block.timestamp, Action.Edit);
+    }
+
+    function deletePost(uint256 postId) public {
+        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+        require(msg.sender == postById[postId].from, "ERROR_CANNOT_DELETE_OTHERS_POSTS");
+        require(postById[postId].commentsCount == 0, "ERROR_CANNOT_DELETE_POST_WITH_COMMENTS");
+        
+        delete postById[postId];
+        
+        emit StateChange(postId, msg.sender, block.timestamp, Action.Delete);
     }
 
     function getAllPosts() public view returns (Post[] memory) {
@@ -111,7 +121,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     function getAllPostsLength() public view returns (uint256) {
         return postIds.length;
     }
-
 
     function getPaginatedPosts(uint256 cursor, uint256 howMany) public view returns (Post[] memory) {
         uint256 length = howMany;
@@ -188,6 +197,16 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         comment.contents = contents;
 
         emit StateChange(commentId, msg.sender, block.timestamp, Action.Edit);
+    }
+
+    function deleteCommentForPost(uint256 postId, uint256 commentId) public {
+        require(commentById[commentId].createdAt != 0, "ERROR_COMMENT_DOES_NOT_EXISTS");
+        require(msg.sender == commentById[commentId].from, "ERROR_CANNOT_DELETE_OTHERS_COMMENTS");
+
+        postById[postId].commentsCount -= 1;
+        delete commentById[commentId];
+
+        emit StateChange(commentId, msg.sender, block.timestamp, Action.Delete);
     }
 
     function getAllCommentsForPost(uint256 postId) public view returns (Comment[] memory)
