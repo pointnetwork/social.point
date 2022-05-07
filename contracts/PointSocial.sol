@@ -37,11 +37,25 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         uint256 createdAt;
     }
 
+    struct Profile {
+        bytes32 displayName;
+        bytes32 displayLocation;
+        bytes32 displayAbout;
+        bytes32 avatar;
+        bytes32 banner;
+    }
+
     event StateChange(
         uint256 postId,
         address indexed from,
         uint256 indexed date,
         Action indexed action
+    );
+
+
+    event ProfileChange(
+        address indexed from,
+        uint256 indexed date
     );
 
     uint256[] public postIds;
@@ -52,6 +66,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     mapping(address => uint256[]) public commentIdsByOwner;
     mapping(uint256 => uint256[]) public likeIdsByPost;
     mapping(uint256 => Like) public likeById;
+    mapping(address => Profile) public profileByOwner;
 
     address private _migrator;
 
@@ -261,6 +276,19 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         return true;
     }
 
+    function setProfile(bytes32 name_, bytes32 location_, bytes32 about_, bytes32 avatar_, bytes32 banner_) public {
+        profileByOwner[msg.sender].displayName = name_;
+        profileByOwner[msg.sender].displayLocation = location_;
+        profileByOwner[msg.sender].displayAbout = about_;
+        profileByOwner[msg.sender].avatar = avatar_;
+        profileByOwner[msg.sender].banner = banner_;
+        emit ProfileChange(msg.sender, block.timestamp);
+    }
+
+    function getProfile(address id_) public view returns (Profile memory) {
+        return profileByOwner[id_];
+    }
+
     function add(
         uint256 id,
         address author,
@@ -313,4 +341,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
             emit StateChange(postId, author, block.timestamp, Action.Comment);
     }
+
+
 }
