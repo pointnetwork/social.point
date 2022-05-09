@@ -225,7 +225,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   const displayAboutRef = useRef();
   const actionsAnchor = useRef();
 
-  const { walletAddress } = useAppContext();
+  const { walletAddress, setUserProfile } = useAppContext();
 
   useEffect(() => {
     loadProfile();
@@ -293,14 +293,15 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
       break;
       case 'save':
         saveEdit();
-        setActionsOpen(false);
         break;
       default:
       case 'cancel':
         cancelEdit();
-        setActionsOpen(false);
       break;
     }
+
+    setActionsOpen(false);
+  
   };
 
   const handleAvatarUpload = ({ target }) => {
@@ -389,18 +390,32 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
 
     try {
 
+      const updatedProfile = {
+        displayName: newProfile.displayName || profile.displayName, 
+        displayLocation: newProfile.displayLocation || profile.displayLocation,
+        displayAbout: newProfile.displayAbout || profile.displayAbout,
+        avatar: newProfile.avatar || profile.avatar,
+        banner: newProfile.banner || profile.banner,
+        followersCount: 0,
+        followingCount: 0,
+      };
+
       const result = await window.point.contract.send({
         contract: 'PointSocial', 
         method: 'setProfile', 
-        params: [newProfile.displayName || profile.displayName, 
-                 newProfile.displayLocation || profile.displayLocation, 
-                 newProfile.displayAbout || profile.displayAbout, 
-                 newProfile.avatar || profile.avatar, 
-                 newProfile.banner || profile.banner]
+        params: [
+          updatedProfile.displayName, 
+          updatedProfile.displayLocation, 
+          updatedProfile.displayAbout, 
+          updatedProfile.avatar, 
+          updatedProfile.banner
+        ]
       });
+
       console.log(result);
       setEdit(false);
-      setProfile(newProfile);      
+      setProfile(updatedProfile);    
+      setUserProfile(updatedProfile);
     }
     catch(error) {
       setAlert(error.message);
