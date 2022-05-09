@@ -557,6 +557,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
             </Grid>
           </CardContent>
           <Divider />
+          {/* Temporarily disabling until functionality is available
           <Box display={'flex'}>
             <Box p={2} flex={'auto'} className={styles.statBox}>
               <p className={styles.statLabel}>Followers</p>
@@ -570,11 +571,12 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                 {loading ? <Skeleton style={{ width: '100px' }}/> : following }
               </p>
             </Box>
-          </Box>
+            </Box>*/}
           <Tabs value={tabIndex} onChange={handleTabChange} indicatorColor="primary" textColor="primary" centered>
             <Tab label="Posts" />
+            {/* Temporarily disabling until functionality is available
             <Tab label="Likes" disabled/>
-            <Tab label="Comments" disabled/>
+            <Tab label="Comments" disabled/>*/}
           </Tabs>
           <TabPanel value={tabIndex} index={0} children={<Feed account={address}/>}/>
         </Card>
