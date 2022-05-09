@@ -1,11 +1,15 @@
 import "./topbar.css";
 import { useAppContext } from '../../context/AppContext';
 import { Link } from "wouter";
-import profileImg from '../../assets/profile-pic.jpg';
 import pointlogo from '../../assets/pointlogowhite.png';
 
+import Avatar from '@material-ui/core/Avatar';
+
 export default function Topbar() {
-  const { walletAddress } = useAppContext()
+  const { walletAddress } = useAppContext();
+  const { identity } = useAppContext();
+  const { profile } = useAppContext();
+
   return (
     <div className="topbarContainer">
       <div className="topbarLeft flex v-center">
@@ -29,11 +33,9 @@ export default function Topbar() {
           </div>
         </div>
         <Link to={`/profile/${walletAddress}`}>
-          <img
-            src={profileImg}
-            alt=""
-            className="topbarImg"
-          />
+          { walletAddress && profile &&
+            <Avatar alt={identity} src={profile && `/_storage/${profile.avatar}` } style={{backgroundColor: `#${walletAddress.slice(-6)}` }}/>
+          }
         </Link>
       </div>
     </div>
