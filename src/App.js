@@ -3,6 +3,7 @@ import { ProvideAppContext } from './context/AppContext'
 import { Route } from 'wouter'
 import Home from './pages/home/Home'
 import Profile from './pages/profile/Profile'
+import Post from './pages/post/Post'
 
 const Main = () => {
     return (
@@ -12,6 +13,9 @@ const Main = () => {
             </Route>
             <Route path="/profile/:account">
                 <Profile />
+            </Route>
+            <Route path="/post/:id">
+                <Post />
             </Route>
         </main>
     )

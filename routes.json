@@ -1,5 +1,9 @@
 {
     "/": "index.html",
     "/profile/[a-zA-Z0-9]+": "index.html",
-    "/profile/:static.:ext": "rewrite:/:static.:ext"
+    "/profile/:static.:ext": "rewrite:/:static.:ext",
+    "/post/[a-zA-Z0-9]+": "index.html",
+    "/post/:static.:ext": "rewrite:/:static.:ext"
+
+
 }
