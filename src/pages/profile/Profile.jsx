@@ -1,74 +1,116 @@
-import "./profile.css";
 import Topbar from "../../components/topbar/Topbar";
-import Sidebar from "../../components/sidebar/Sidebar";
-import Feed from "../../components/feed/Feed";
-import Rightbar from "../../components/rightbar/Rightbar";
-import profilePic from '../../assets/profile-pic.jpg';
-import profileCoverImg from '../../assets/header-pic.jpg';
 import { useRoute } from "wouter";
 import { useEffect, useState } from "react";
+import { makeStyles } from '@material-ui/core/styles';
 
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Backdrop from '@material-ui/core/Backdrop';
+import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert from '@material-ui/lab/Alert';
 
+import Box from '@material-ui/core/Box';
+import Grid from '@material-ui/core/Grid';
+import SearchOutlinedIcon from '@material-ui/icons/SearchOutlined';
+import Typography from '@material-ui/core/Typography';
+
+import ProfileCard from "../../components/profile/ProfileCard";
+
+const EMPTY = '0x0000000000000000000000000000000000000000';
+
 function Alert(props) {
-  return <MuiAlert elevation={6} variant="filled" {...props} />;
+    return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
+
+const useStyles = makeStyles((theme) => ({
+    backdrop: {
+        zIndex: theme.zIndex.drawer + 1,
+    },
+}));
 
 const Profile = () => {
-  const [match, params] = useRoute("/profile/:account");
-  const [identity, setIdentity] = useState(undefined);
+    const [match, params] = useRoute("/profile/:account");
+    const [loading, setLoading] = useState(true);
+    const [alert, setAlert] = useState("");
+    const [identity, setIdentity] = useState(undefined);
+    const [address, setAddress] = useState(undefined);
 
-  useEffect(() => {
-    getIdentity();
-  }, []);
+    const styles = useStyles();
+  
+    const handleAlert = (event, reason) => {
+        if (reason === 'clickaway') {
+          return;
+        }
+        setAlert("");
+    };    
+    
+    const getAccount = async () => {
 
-  const getIdentity = async () => {
-    try {
-      const result = await window.point.identity.ownerToIdentity({owner: params.account});
-      if (result && result.data && result.data.identity) {
-        setIdentity(result.data.identity);
-      }
-    }
-    catch(error) {
-      console.log("Error");
-    }
-  };
+        try {
+          const isAddress = params.account.match(/0x[a-fA-F0-9]{40}/);
+          let address = null;
+          let identity = null;
+    
+          if (isAddress) {
+            address = params.account;
+            const result = await window.point.identity.ownerToIdentity({owner: address});
+            if (result && result.data && result.data.identity) {
+              identity = result.data.identity;
+            }
+          }
+          else {
+            identity =  params.account;
+            const result = await window.point.identity.identityToOwner({identity: identity});
+            if (result && result.data && result.data.owner && result.data.owner !== EMPTY) {
+              address = result.data.owner;
+            }
+          }
+    
+          if (address && identity) {
+            setAddress(address);
+            setIdentity(identity);
+          }
+        }
+        catch(error) {
+          setAlert(error.message);
+        }
+        finally {
+          setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        getAccount();
+    }, []);
 
-  return (
-    <> 
-      <Topbar />
-      { identity ?
-        <div className="profile">
-          <div className="profileRight">
-            <div className="profileRightTop">
-              <div className="profileCover">
-                <img
-                  className="profileCoverImg"
-                  src={profileCoverImg}
-                  alt=""
-                />
-                <img
-                  className="profileUserImg"
-                  src={profilePic}
-                  alt=""
-                />
-              </div>
-              <div className="profileInfo">
-                <h4 className="profileInfoName">@{identity}</h4>
-                <span className="profileInfoDesc">{params.account}</span>
-              </div>
-            </div>
-            <div className="profileRightBottom">
-              <Sidebar />
-              <Feed account={params.account} />
-              <Rightbar />
-            </div>
-          </div>
-        </div> :
-        <Alert severity="error">Invalid account or account does not exists</Alert>
-      }
-    </>
-  );
+    return (
+        <>
+            <Topbar />
+            <Backdrop className={styles.backdrop} open={loading}>
+                <CircularProgress color="inherit" />
+            </Backdrop>
+            { (address && identity)? 
+                <>
+                    <Grid container spacing={10} direction="column" justifyContent="center" alignItems="center" style={{ minHeight: '80vh', overflow: 'auto', marginTop: "48px" }}>
+                        <ProfileCard address={address} identity={identity} setUpperLoading={setLoading} setAlert={setAlert}/>
+                    </Grid>
+                </>: 
+                <>
+                    { !loading && 
+                        <Box color="text.primary"  display="flex" justifyContent="center" alignItems="center" height="90vh">
+                            <div>
+                                <SearchOutlinedIcon style={{ fontSize: 120 }} />
+                                <Typography>Profile not found</Typography>
+                            </div>
+                        </Box>
+                    }                
+                </> 
+            }            
+            <Snackbar open={!(alert === "")} autoHideDuration={6000} onClose={handleAlert}>
+                <Alert onClose={handleAlert} severity="error">{ alert }</Alert>
+            </Snackbar>
+        </>
+    );
 }
+
 
 export default Profile

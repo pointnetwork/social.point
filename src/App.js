@@ -1,3 +1,4 @@
+import '@fontsource/roboto';
 import { ProvideAppContext } from './context/AppContext'
 import { Route } from 'wouter'
 import Home from './pages/home/Home'

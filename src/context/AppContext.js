@@ -5,27 +5,40 @@ const defaultContext = {
   walletAddress: undefined,
   walletError: undefined,
   identity: undefined,
-  goHome: () => {}
+  profile: undefined,
+  goHome: () => {},
+  setUserProfile: () => {},
 };
 
 const AppContext = createContext(defaultContext);
 
-export const useAppContext = () => useContext(AppContext)
+const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
+export const useAppContext = () => useContext(AppContext);
 
 export const ProvideAppContext = ({ children }) => {
   const [walletAddress, setWalletAddress] = useState();
   const [identity, setIdentity] = useState();
   const [walletError, setWallerError] = useState();
   const [, setLocation] = useLocation();
+  const [profile, setUserProfile] = useState();
 
   useEffect(() => {
     (async () => {
       try {
         const {data: {address}} = await window.point.wallet.address();
         const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: address});
-
+        const {data: profile} = await window.point.contract.call({contract: 'PointSocial', method: 'getProfile', params: [address]});
         setWalletAddress(address);
         setIdentity(identity);
+        setUserProfile({
+          displayName : (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' }),
+          displayLocation : (profile[1] === EMPTY)? {data:"Point Network"} : await window.point.storage.getString({ id: profile[1], encoding: 'utf-8' }),
+          displayAbout : (profile[2] === EMPTY)? {data:"Hey I'm using Point Social!"} : await window.point.storage.getString({ id: profile[2], encoding: 'utf-8' }),
+          avatar: profile[3],
+          banner: profile[4],
+          followersCount: 0,
+          followingCount: 0,
+        });
       } catch (e) {
         setWallerError(e);
       }
@@ -40,6 +53,8 @@ export const ProvideAppContext = ({ children }) => {
     walletAddress,
     walletError,
     identity,
+    profile,
+    setUserProfile,
     goHome
   }
 
