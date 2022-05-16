@@ -49,20 +49,25 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
         loadComments();
     }, []);
 
+    // TODO: Set a progressive comment loading // Maybe getting only the indices?
     const loadComments = async () => {
         try {
             setLoading(true);
             const {data: comments}  = await window.point.contract.call({contract: 'PointSocial', method: 'getAllCommentsForPost', params: [postId]});
             const filtered = comments.filter(r => (parseInt(r[3]) !== 0)).map(([id, from, contents, createdAt]) => ({id, from, contents, createdAt: createdAt*1000}));
 
-            setComments(filtered)
+            setComments(filtered);
             setLoading(false);
         }
         catch(error) {
             setAlert(error.message);
         }
     };
-    
+
+    const deleteComment = (commentId) => {
+        setComments((comments) => comments.filter(comment => comment.id !== commentId));
+    }
+
     return (
         <>
             <div className={styles.root}>
@@ -87,7 +92,7 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
                                 .filter(c => c.createdAt > 0)
                                 .map((comment) => (
                                 <>
-                                    { loading? <Skeleton width="100%"/>: <CommentItem key={comment.id} postId={postId} comment={comment} setUpperLoading={setLoading} setAlert={setAlert}/> }
+                                    { loading? <Skeleton width="100%"/>: <CommentItem key={comment.id} postId={postId} comment={comment} parentDeleteComment={deleteComment} setUpperLoading={setLoading} setAlert={setAlert}/> }
                                     <Divider variant="middle"/>
                                 </>))
                         }

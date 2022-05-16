@@ -62,7 +62,7 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-const CommentItem = ({postId, comment, setUpperLoading, setAlert}) => {
+const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, setAlert}) => {
 
     const [loading, setLoading] = useState(true);
 
@@ -140,17 +140,14 @@ const CommentItem = ({postId, comment, setUpperLoading, setAlert}) => {
         }
     };
 
-    const deletePost =  async () => {
+    const deleteComment =  async () => {
         try {
             setLoading(true);
-
             await window.point.contract.send({contract: 'PointSocial', method: 'deleteCommentForPost', params: [postId, comment.id]});
-            //TODO: Notify the parent
+            parentDeleteComment(comment.id);
         }
         catch(error) {
             setAlert(error.message);
-        }
-        finally {
             setLoading(false);
         }
     };
@@ -249,7 +246,7 @@ const CommentItem = ({postId, comment, setUpperLoading, setAlert}) => {
             <Button onClick={() => showPrompt(false)} color="primary">
                 Cancel
             </Button>
-            <Button onClick={deletePost} color="primary" autoFocus>
+            <Button onClick={deleteComment} color="primary" autoFocus>
                 Ok
             </Button>
             </DialogActions>
