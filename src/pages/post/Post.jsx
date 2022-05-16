@@ -11,6 +11,8 @@ import MuiAlert from '@material-ui/lab/Alert';
 
 import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
+import Container from '@material-ui/core/Container';
+
 import SearchOutlinedIcon from '@material-ui/icons/SearchOutlined';
 import Typography from '@material-ui/core/Typography';
 
@@ -26,6 +28,13 @@ const useStyles = makeStyles((theme) => ({
     backdrop: {
         zIndex: theme.zIndex.drawer + 1,
     },
+    container: {
+        padding: theme.spacing(2, 2),
+        display: "flex",
+        minHeight: "90vh",
+        flexDirection: "column",
+        justifyContent: "center"        
+    }
 }));
 
 const Post = () => {
@@ -46,7 +55,7 @@ const Post = () => {
     const getPost = async () => {
         try {
           const isPost = params.id.match(/^\d+$/);
-          if (isPost) {            
+          if (isPost) {
             const {data: post}  = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [params.id]});
             if (post && (parseInt(post[4]) !== 0)) {
                 setPost({
@@ -83,9 +92,9 @@ const Post = () => {
             </Backdrop>
             { (post)? 
                 <>
-                    <Grid container spacing={0} direction="column" justifyContent="center" alignItems="center" style={{ minHeight: '80vh', overflow: 'auto', marginTop: "48px", marginBottom: "48px", marginLeft: "16px", marginRight: "16px" }}>
-                        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert}/>
-                    </Grid>
+                    <Container fixed={false} className={styles.container}>
+                        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} />
+                    </Container>
                 </>: 
                 <>
                     { !loading && 
@@ -99,7 +108,7 @@ const Post = () => {
                 </> 
             }            
             <Snackbar open={!(alert === "")} autoHideDuration={6000} onClose={handleAlert}>
-                <Alert onClose={handleAlert} severity="error">{ alert }</Alert>
+                <Alert onClose={handleAlert} severity={ alert.split("|")[1]||"error"}>{ alert.split("|")[0] }</Alert>
             </Snackbar>
         </>
     );

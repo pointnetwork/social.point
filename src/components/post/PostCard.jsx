@@ -18,7 +18,7 @@ import SaveOutlinedIcon from '@material-ui/icons/SaveOutlined';
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined';
 
 import AccountTreeOutlinedIcon from '@material-ui/icons/AccountTreeOutlined';
-import HttpOutlinedIcon from '@material-ui/icons/HttpOutlined';
+import LanguageOutlinedIcon from '@material-ui/icons/LanguageOutlined';
 
 import { format } from "timeago.js";
 
@@ -46,6 +46,8 @@ import ShareOutlinedIcon from '@material-ui/icons/ShareOutlined';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 
+import CommentList from '../comments/CommentList';
+
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const useStyles = makeStyles((theme) => ({
@@ -55,12 +57,20 @@ const useStyles = makeStyles((theme) => ({
         opacity: 0.9    
     },
     card: {
-        minWidth: 250,
-        maxWidth: 1000,
+    },
+    avatar: {
+        cursor:'pointer'
     },
     media: {
         height: 0,
         paddingTop: '56.25%', // 16:9
+        objectFit: 'contain',
+        backgroundSize: 'contain',
+        maxHeight: '500px'
+    },
+    image: {
+        objectFit: 'contain',
+        maxHeight: '500px'
     },
     expand: {
         transform: 'rotate(0deg)',
@@ -74,18 +84,17 @@ const useStyles = makeStyles((theme) => ({
     },    
 }));
 
-
 const PostCard = ({post, setUpperLoading, setAlert}) => {
 
     const [loading, setLoading] = useState(true);
+    const [countersLoading, setCountersLoading] = useState(true);
+
     const [expanded, setExpanded] = useState(false);
     const [actionsOpen, setActionsOpen] = useState(false);
     const [shareOpen, setShareOpen] = useState(false);
     const [edit, setEdit] = useState(false);
   
     const styles = useStyles();
-    const theme = useTheme();
-    const sm = useMediaQuery(theme.breakpoints.down('sm'));
 
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
@@ -99,7 +108,11 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const [content, setContent] = useState();
     const [media, setMedia] = useState();
     const [date, setDate] = useState();
+
     const [likes, setLikes] = useState();
+    const [comments, setComments] = useState();
+    
+    const [like, setLike] = useState(false);
 
     const actionsAnchor = useRef();
     const shareAnchor = useRef();
@@ -108,7 +121,6 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     useEffect(() => {
         loadPost();
     }, []);
-
 
     const loadPost = async () => {
 
@@ -131,16 +143,22 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
 
         try {
             const {data: contents} = (post.contents === EMPTY)? {data:EMPTY} : await window.point.storage.getString({ id: post.contents, encoding: 'utf-8' });
-            const {data: image} = (post.image === EMPTY)? {data:EMPTY} : await window.point.storage.getString({ id: post.image, encoding: 'utf-8' });
             setContent(contents);
-            setMedia(`/_storage/${image}`);
+
+            if (post.image !== EMPTY)  {
+                setMedia(`/_storage/${post.image}`);
+            }
+
             setLikes(post.likesCount);
+            setComments(post.commentsCount);
+
+            setCountersLoading(false);
         }
         catch(error) {
             setAlert(error.message);
         }
 
-        await new Promise((res,rej) => setTimeout(res, 5000));
+        setCountersLoading(false);
         setLoading(false);
     };
 
@@ -162,7 +180,27 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
         }
         setActionsOpen(false);  
     };
-    
+
+    const share = async (type) => {        
+        console.log("sharing...");
+        try {
+            setShareOpen(false);
+            const url = `https://social.point${((type === 'web2')? '.link' : '')}/post/${post.id}`;
+
+            if (window.navigator.share) {
+                await window.navigator.share({ url });
+            }
+            else if (window.navigator.clipboard) {
+                console.log("fallback to clipboard");
+                await window.navigator.clipboard.writeText(url);
+                setAlert("Copied to clipboard!|success");
+            }
+        }
+        catch(error) {
+            setAlert(error.message);
+        }
+    }
+
     const deletePost = async () => {
         setEdit(false);
     };
@@ -179,6 +217,13 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
         setLoading(true);
     };
     
+    const toggleLike = async () => {
+        //setCountersLoading(true);
+        await new Promise((res, rej) => setTimeout(res, 500));        
+        setLike(!like);
+        //setCountersLoading(false);
+    }
+
     const handleActionsOpen = () => {
         setActionsOpen(true);
     };
@@ -246,22 +291,22 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const shareActions = <>
         <Menu id="actions-menu"
             anchorEl={shareAnchor.current}
-            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-            transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+            anchorOrigin={{ vertical: "top", horizontal: "left" }}
+            transformOrigin={{ vertical: "top", horizontal: "left" }}
             getContentAnchorEl={null}
             onClose={handleShareClose}
             open={shareOpen}>
-            <MenuItem onClick={(event) => console.log("web 3")}>
+            <MenuItem onClick={()=>share('web3')}>
                 <ListItemIcon style={{margin: 0}}>
                     <AccountTreeOutlinedIcon fontSize="small" style={{margin: 0}}/>
                 </ListItemIcon>
-                <Typography variant="caption" align="left">Web3</Typography>
+                <Typography variant="caption" align="left">for Web3</Typography>
             </MenuItem>
-            <MenuItem onClick={(event) => console.log("web 2")}>
+            <MenuItem onClick={()=>share('web2')}>
                 <ListItemIcon style={{margin: 0}}>
-                    <HttpOutlinedIcon fontSize="small" style={{margin: 0}}/>
+                    <LanguageOutlinedIcon fontSize="small" style={{margin: 0}}/>
                 </ListItemIcon>
-                <Typography variant="caption" align="left">Web 2.0</Typography>
+                <Typography variant="caption" align="left">for Web2</Typography>
             </MenuItem>
         </Menu>
     </>
@@ -276,30 +321,44 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                     <CardHeader
                         avatar={loading
                             ? <Skeleton variant="circle"><Avatar /></Skeleton>
-                            : <Avatar aria-label="avatar" alt={name} src={avatar} className={styles.avatar}  style={{backgroundColor: color }}/>
+                            : <Link to={`/profile/${post.from}`}><Avatar aria-label="avatar" alt={name} src={avatar} className={styles.avatar}  style={{backgroundColor: color }}/></Link>
                         }
                         action={postActions}
-                        title={<Typography variant="subtitle1"> {loading ? <Skeleton /> : name }</Typography>}
+                        title={<Link to={`/profile/${post.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}}> {loading ? <Skeleton /> : name }</Typography></Link>}
                         subheader={<Typography variant="subtitle2"> {loading ? <Skeleton /> : format(date) }</Typography>}
                     />
                     <CardContent>
                         <Typography variant="body2" component="p">{ loading ? <Skeleton /> : (content !== EMPTY) && content }
                         </Typography>
                     </CardContent>
-                    { loading? <Skeleton variant="rect"></Skeleton> : ((media !== EMPTY) && media) && <CardMedia className={styles.media} image={media} />}
+                    { loading
+                        ? <Skeleton variant="rect"></Skeleton> 
+                        : 
+                        media && <CardMedia className={styles.media} component="image" image={media}/>
+                    }
                     <CardActions disableSpacing>
-                        <div className={gutterStyles.parent}>
-                            <button type={'button'} className={iconLabelStyles.link}>
-                                <FavoriteBorderOutlinedIcon className={iconLabelStyles.icon} />{post.likesCount}
-                            </button>
-                            <span className={iconLabelStyles.link} onClick={ () => { expandButton && expandButton.current && expandButton.current.click()} }>
-                                <ModeCommentOutlinedIcon className={iconLabelStyles.icon} />0
-                            </span>
-                            <span className={iconLabelStyles.link} aria-label="share" aria-haspopup="true" ref={shareAnchor} onClick={handleShareOpen}>
-                                <ShareOutlinedIcon className={iconLabelStyles.icon} />
-                            </span>
-                        </div>
-                        { shareActions }
+                        {
+                            (countersLoading || loading)
+                                ?   <Skeleton variant="rect" width={'100%'} height={16}/>
+                                :   <>
+                                    <div className={gutterStyles.parent}>
+                                        <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike}>
+                                            { like? 
+                                                <FavoriteOutlinedIcon className={iconLabelStyles.icon} style={{fontColor: '#ff000'}} color="secondary"/> : 
+                                                <FavoriteBorderOutlinedIcon className={iconLabelStyles.icon}/>
+                                            }
+                                            {likes}
+                                        </button>    
+                                        <span className={iconLabelStyles.link} onClick={ () => { expandButton && expandButton.current && expandButton.current.click()} }>
+                                            <ModeCommentOutlinedIcon className={iconLabelStyles.icon} />{comments}
+                                        </span>
+                                        <span className={iconLabelStyles.link} aria-label="share" aria-haspopup="true" ref={shareAnchor} onClick={handleShareOpen}>
+                                            <ShareOutlinedIcon className={iconLabelStyles.icon} />
+                                        </span>
+                                    </div>
+                                    { shareActions }                                
+                                    </>
+                        }                        
                         <IconButton
                             className={clsx(styles.expand, { [styles.expandOpen]: expanded, })}
                             onClick={handleExpandClick}
@@ -310,9 +369,8 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                             <ExpandMoreIcon />
                         </IconButton>
                     </CardActions>
-                    <Collapse in={expanded} timeout="auto" unmountOnExit>
-                        <CardContent>
-                        </CardContent>
+                    <Collapse in={expanded} timeout="auto" unmountOnExit style={{ width:'100%'}}>
+                        <CommentList postId={post.id} setUpperLoading={setLoading} setAlert={setAlert}/>
                     </Collapse>
                 </Card>
             </div>
