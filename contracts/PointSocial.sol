@@ -72,7 +72,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
     enum Action {Migrator, Post, Like, Comment, Edit, Delete}
 
-    function initialize() public initializer {
+    function initialize() public initializer onlyProxy {
         __Ownable_init();
         __UUPSUpgradeable_init();
     }
