@@ -127,7 +127,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
     
-    const { walletAddress, profile } = useAppContext();
+    const { walletAddress, profile, identity } = useAppContext();
 
     const [name, setName] = useState();
     const [avatar, setAvatar] = useState(EMPTY);
@@ -154,7 +154,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const loadPost = async () => {
 
         if (post.from === walletAddress) {
-            setName(profile.name);
+            setName(profile.displayName || identity);
             setAvatar(`/_storage/${profile.avatar}`);
         }
         else {
@@ -409,7 +409,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                             ? <Skeleton variant="circle"><Avatar /></Skeleton>
                             : <Link to={`/profile/${post.from}`}><Avatar aria-label="avatar" alt={name} src={avatar} className={styles.avatar}  style={{backgroundColor: color }}/></Link>
                         }
-                        action={postActions}
+                        action={walletAddress === post.from && postActions}
                         title={<Link to={`/profile/${post.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}}> {loading ? <Skeleton width="100%" height="100%"/> : name }</Typography></Link>}
                         subheader={<Typography variant="subtitle2"> {loading ? <Skeleton width="100%" height="100%"/> : format(date) }</Typography>}
                     />

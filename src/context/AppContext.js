@@ -30,10 +30,13 @@ export const ProvideAppContext = ({ children }) => {
         const {data: profile} = await window.point.contract.call({contract: 'PointSocial', method: 'getProfile', params: [address]});
         setWalletAddress(address);
         setIdentity(identity);
+        const {data: name} = (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' });
+        const {data: location} = (profile[1] === EMPTY)? {data:"Point Network"} : await window.point.storage.getString({ id: profile[1], encoding: 'utf-8' });
+        const {data: about} = (profile[2] === EMPTY)? {data:"Hey I'm using Point Social!"} : await window.point.storage.getString({ id: profile[2], encoding: 'utf-8' });
         setUserProfile({
-          displayName : (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' }),
-          displayLocation : (profile[1] === EMPTY)? {data:"Point Network"} : await window.point.storage.getString({ id: profile[1], encoding: 'utf-8' }),
-          displayAbout : (profile[2] === EMPTY)? {data:"Hey I'm using Point Social!"} : await window.point.storage.getString({ id: profile[2], encoding: 'utf-8' }),
+          displayName : name,
+          displayLocation : location, 
+          displayAbout : about,
           avatar: profile[3],
           banner: profile[4],
           followersCount: 0,

@@ -18,7 +18,7 @@ const UserAvatar = ({user, address, upperLoading, setAlert}) => {
 
     const styles = useStyles();
     const [loading, setLoading] = useState(false);
-    const [name, setName] = useState("");
+    const [name, setName] = useState();
     const [avatar, setAvatar] = useState(EMPTY);
     const [color, setColor] = useState((address && `#${address.slice(-6)}`) || '#f00');
 
@@ -31,7 +31,7 @@ const UserAvatar = ({user, address, upperLoading, setAlert}) => {
     const loadUser = async () => {
 
         if (address === walletAddress) {
-            setName(profile.name || identity);
+            setName(profile.displayName || identity);
             setAvatar(`/_storage/${profile.avatar}`);
             setColor(`#${address.slice(-6)}`);
         }
@@ -63,7 +63,7 @@ const UserAvatar = ({user, address, upperLoading, setAlert}) => {
     return (
         (loading || upperLoading)
         ? <Skeleton variant="circle"><Avatar /></Skeleton>
-        : <Link to={`/profile/${address}`}><Avatar aria-label="avatar" alt={name.toUpperCase()} src={avatar} className={styles.root} style={{backgroundColor: color }}/></Link>
+        : <Link to={`/profile/${address}`}><Avatar aria-label="avatar" alt={name} src={avatar} className={styles.root} style={{backgroundColor: color }}/></Link>
     );
 };
 

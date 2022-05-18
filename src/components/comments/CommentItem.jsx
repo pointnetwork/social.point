@@ -90,7 +90,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, set
     const loadComment = async () => {
 
         if (comment.from === walletAddress) {
-            setName(profile.name || identity);
+            setName(profile.displayName || identity);
             setAvatar(`/_storage/${profile.avatar}`);
         }
         else {
@@ -261,7 +261,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, set
                 </Backdrop>*/}
                 <ListItem alignItems={edit?"center":"flex-start"} > 
                     <ListItemAvatar>
-                        <UserAvatar user={{ address:comment.from, avatar, name  }} address={comment.from} upperLoading={loading} setAlert={setAlert}/>
+                        <UserAvatar  address={comment.from} upperLoading={loading} setAlert={setAlert}/>
                     </ListItemAvatar>
                     {
                         edit
