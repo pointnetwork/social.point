@@ -2,7 +2,6 @@ import Topbar from "../../components/topbar/Topbar";
 import { useRoute } from "wouter";
 import { useEffect, useState } from "react";
 import { makeStyles } from '@material-ui/core/styles';
-import { useAppContext } from '../../context/AppContext';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Backdrop from '@material-ui/core/Backdrop';
@@ -10,15 +9,12 @@ import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert from '@material-ui/lab/Alert';
 
 import Box from '@material-ui/core/Box';
-import Grid from '@material-ui/core/Grid';
 import Container from '@material-ui/core/Container';
 
 import SearchOutlinedIcon from '@material-ui/icons/SearchOutlined';
 import Typography from '@material-ui/core/Typography';
 
 import PostCard from '../../components/post/PostCard';
-
-const EMPTY = '0x0000000000000000000000000000000000000000';
 
 function Alert(props) {
     return <MuiAlert elevation={6} variant="filled" {...props} />;
@@ -67,10 +63,8 @@ const Post = () => {
                     likesCount: post[5],
                     commentsCount: post[6],
                 })
-                console.log(post);
             }
           }
-          
         }
         catch(error) {
           setAlert(error.message);
@@ -108,7 +102,7 @@ const Post = () => {
                 </> 
             }            
             <Snackbar open={!(alert === "")} autoHideDuration={6000} onClose={handleAlert}>
-                <Alert onClose={handleAlert} severity={ alert.split("|")[1]||"error"}>{ alert.split("|")[0] }</Alert>
+                <Alert onClose={handleAlert} severity={alert.split("|")[1]||"error"}>{ alert.split("|")[0] }</Alert>
             </Snackbar>
         </>
     );

@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useAppContext } from '../../context/AppContext';
+import { useEffect, useState, useRef } from "react";
 import { makeStyles } from '@material-ui/core/styles';
 
 import CommentItem from './CommentItem';
@@ -15,6 +14,9 @@ import {Backdrop,
 import Skeleton from '@material-ui/lab/Skeleton';
 
 import AllInboxOutlinedIcon from '@material-ui/icons/AllInboxOutlined';
+import RichTextField from '../generic/RichTextField';
+import SendOutlinedIcon from '@material-ui/icons/SendOutlined';
+import IconButton from '@material-ui/core/IconButton';
 
 const useStyles = makeStyles((theme) => ({
     backdrop: {
@@ -35,6 +37,11 @@ const useStyles = makeStyles((theme) => ({
         flexDirection: "column",
         alignItems:"center",
         justifyContent: "center"        
+    },
+    commentBox: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'        
     }
 }));
 
@@ -43,19 +50,20 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
     const [loading, setLoading] = useState(true);
     const [comments, setComments] = useState([]);
 
+    const inputRef = useRef();
+
     const styles = useStyles();
     
     useEffect(() => {
         loadComments();
     }, []);
 
-    // TODO: Set a progressive comment loading // Maybe getting only the indices?
+    // TODO: Set a progressive approach for comment loading // Maybe getting only the indices?
     const loadComments = async () => {
         try {
             setLoading(true);
             const {data: comments}  = await window.point.contract.call({contract: 'PointSocial', method: 'getAllCommentsForPost', params: [postId]});
             const filtered = comments.filter(r => (parseInt(r[3]) !== 0)).map(([id, from, contents, createdAt]) => ({id, from, contents, createdAt: createdAt*1000}));
-
             setComments(filtered);
             setLoading(false);
         }
@@ -63,6 +71,26 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
             setAlert(error.message);
         }
     };
+
+    const addComment = async () => {
+        if (inputRef && inputRef.current && inputRef.current.value && inputRef.current.value.trim()) {
+            try {
+                const contents = inputRef.current.value.trim();
+                setLoading(true);
+                const {data: storageId} = await window.point.storage.putString({data: contents});
+                const result = await window.point.contract.send({contract: 'PointSocial', method: 'addCommentToPost', params: [postId, storageId]});
+                console.log(result);
+                // TODO: Fetch only the latest posts using progressive loading
+                await loadComments();
+            }
+            catch(error) {
+                setAlert(error.message);
+            }
+            finally {
+                setLoading(false);
+            }
+        }
+    }
 
     const deleteComment = (commentId) => {
         setComments((comments) => comments.filter(comment => comment.id !== commentId));
@@ -74,6 +102,15 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
                 <Backdrop className={styles.backdrop} open={loading}>
                     <CircularProgress color="inherit" />
                 </Backdrop>
+                {
+                    !loading && 
+                    <Box m={2} className={styles.commentBox}>
+                        <RichTextField ref={inputRef} value="" placeholder="Add a comment..."/>
+                            <IconButton aria-label="send" ml={3} onClick={addComment}>
+                                <SendOutlinedIcon />
+                            </IconButton>
+                    </Box>
+                }
                 <Divider variant="middle"/>
                 { !loading && <>
                     {

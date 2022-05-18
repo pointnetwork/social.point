@@ -1,9 +1,7 @@
 import clsx from 'clsx';
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, createRef } from "react";
 import { useAppContext } from '../../context/AppContext';
-import { useTheme } from '@material-ui/core/styles';
 import { makeStyles } from '@material-ui/core/styles';
-import useMediaQuery from '@material-ui/core/useMediaQuery';
 import { usePushingGutterStyles } from '@mui-treasury/styles/gutter/pushing';
 import { useLabelIconStyles } from '@mui-treasury/styles/icon/label';
 import FavoriteBorderOutlinedIcon from '@material-ui/icons/FavoriteBorderOutlined';
@@ -11,6 +9,8 @@ import FavoriteOutlinedIcon from '@material-ui/icons/FavoriteOutlined';
 import ModeCommentOutlinedIcon from '@material-ui/icons/ModeCommentOutlined';
 
 import { Link } from "wouter";
+
+import RichTextField from '../generic/RichTextField';
 
 import CancelOutlinedIcon from '@material-ui/icons/CancelOutlined';
 import EditOutlinedIcon from '@material-ui/icons/EditOutlined';
@@ -22,15 +22,12 @@ import LanguageOutlinedIcon from '@material-ui/icons/LanguageOutlined';
 
 import { format } from "timeago.js";
 
-import defaultBanner from '../../assets/header-pic.jpg';
-
 import {Avatar, 
-        Backdrop, 
+        Backdrop,
         Card,
         CardActions, 
         CardContent,
         CardHeader,
-        CardMedia,
         CircularProgress,
         Collapse,
         IconButton,
@@ -47,6 +44,8 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 
 import CommentList from '../comments/CommentList';
+import CardMediaSelector from '../generic/CardMediaSelector';
+import CardMediaContainer from '../generic/CardMediaContainer';
 
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -63,14 +62,24 @@ const useStyles = makeStyles((theme) => ({
     },
     media: {
         height: 0,
+        minHeight: '450px',
+        maxHeight: '500px',
         paddingTop: '56.25%', // 16:9
         objectFit: 'contain',
         backgroundSize: 'contain',
-        maxHeight: '500px'
+    },
+    editor: {
+        height: '450px',
+        maxHeight: '500px',
+        objectFit: 'contain',
+        backgroundSize: 'contain',
+        backgroundColor: '#ccc',
     },
     image: {
         objectFit: 'contain',
-        maxHeight: '500px'
+        backgroundSize: 'contain',
+        minHeight: '450px',
+        maxHeight: '500px',
     },
     expand: {
         transform: 'rotate(0deg)',
@@ -81,8 +90,25 @@ const useStyles = makeStyles((theme) => ({
     },
     expandOpen: {
         transform: 'rotate(180deg)',
-    },    
+    },
+    wrapper: {
+        margin: theme.spacing(1),
+        position: 'relative',
+    }
 }));
+
+function DataURIToBlob(dataURI) {
+    const splitDataURI = dataURI.split(',')
+    const byteString = splitDataURI[0].indexOf('base64') >= 0 ? atob(splitDataURI[1]) : decodeURI(splitDataURI[1])
+    const mimeString = splitDataURI[0].split(':')[1].split(';')[0]
+
+    const ia = new Uint8Array(byteString.length)
+    for (let i = 0; i < byteString.length; i++)
+        ia[i] = byteString.charCodeAt(i)
+
+    return new Blob([ia], { type: mimeString })
+}
+
 
 const PostCard = ({post, setUpperLoading, setAlert}) => {
 
@@ -95,6 +121,8 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const [edit, setEdit] = useState(false);
   
     const styles = useStyles();
+    const inputRef = useRef();
+    const mediaRef = createRef();
 
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
@@ -113,6 +141,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const [comments, setComments] = useState();
     
     const [like, setLike] = useState(false);
+    const [likeLoading, setLikeLoading] = useState(false);
 
     const actionsAnchor = useRef();
     const shareAnchor = useRef();
@@ -149,6 +178,10 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                 setMedia(`/_storage/${post.image}`);
             }
 
+            const {data: isLiked} = await window.point.contract.call({contract: 'PointSocial', method: 'checkLikeToPost', params: [post.id]});
+            setLike(isLiked);
+
+            setDate(post.createdAt*1000);
             setLikes(post.likesCount);
             setComments(post.commentsCount);
 
@@ -182,7 +215,6 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     };
 
     const share = async (type) => {        
-        console.log("sharing...");
         try {
             setShareOpen(false);
             const url = `https://social.point${((type === 'web2')? '.link' : '')}/post/${post.id}`;
@@ -191,7 +223,6 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                 await window.navigator.share({ url });
             }
             else if (window.navigator.clipboard) {
-                console.log("fallback to clipboard");
                 await window.navigator.clipboard.writeText(url);
                 setAlert("Copied to clipboard!|success");
             }
@@ -213,15 +244,78 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
         setEdit(true);
     };
 
-    const saveEdit = async () => {
-        setLoading(true);
+    const saveEdit = async () => { 
+        
+        try {
+            const newContent = (inputRef.current.value.trim())? inputRef.current.value.trim() : "";
+            const newMedia = mediaRef.current.media();
+
+            setEdit(false);
+            setLoading(true);
+
+            let contentId;
+            if (!newContent) {
+                contentId = EMPTY;
+            }
+            if (newContent === content) {
+                contentId = post.contents;
+            }
+            else {
+                const {data: storageId} = (newContent === EMPTY)? newContent: await window.point.storage.putString({data: newContent});
+                contentId = storageId;
+            }
+
+            let imageId;
+            if (!newMedia) {
+                imageId = EMPTY;
+            }
+            else if (newMedia === media) {
+                imageId = post.image;
+            }
+            else {
+                const formData = new FormData()
+                formData.append("postfile", DataURIToBlob(newMedia));
+                const {data: storageId} = await window.point.storage.postFile(formData);
+                imageId = storageId;
+            }
+
+            if (contentId === imageId && contentId === EMPTY) {
+                throw new Error("Sorry, but you can't create an empty post");
+            }
+            
+            console.log({contract: 'PointSocial', method: 'editPost', params: [post.id, contentId, imageId]});
+            const result = await window.point.contract.send({contract: 'PointSocial', method: 'editPost', params: [post.id, contentId, imageId]});
+            console.log(result);
+
+            setContent(newContent);
+            setMedia(newMedia);
+        }
+        catch(error) {
+            console.log(error);
+            setAlert(error.message);
+        }
+        finally {
+            setLoading(false);
+        }
     };
     
     const toggleLike = async () => {
-        //setCountersLoading(true);
-        await new Promise((res, rej) => setTimeout(res, 500));        
-        setLike(!like);
-        //setCountersLoading(false);
+        try {
+            setLikeLoading(true);
+            await window.point.contract.send({contract: 'PointSocial', method: 'addLikeToPost', params: [post.id]});
+            const {data: isLiked} = await window.point.contract.call({contract: 'PointSocial', method: 'checkLikeToPost', params: [post.id]});
+            setLike(isLiked);
+
+            //TODO: Change to events
+            const {data} = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [post.id]});
+            setLikes(data[5]);
+        }
+        catch(error) {
+            setAlert(error.message);
+        }
+        finally {
+            setLikeLoading(false);
+        }
     }
 
     const handleActionsOpen = () => {
@@ -259,14 +353,6 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                 <EditOutlinedIcon fontSize="small" style={{margin: 0}}/>
             </ListItemIcon>
             <Typography variant="caption" align="left">Edit</Typography>
-            </MenuItem>
-        }
-        {!edit && 
-            <MenuItem onClick={(event) => handleAction('delete')}>
-            <ListItemIcon style={{margin: 0}}>
-                <DeleteOutlineOutlinedIcon fontSize="small" style={{margin: 0}}/>
-            </ListItemIcon>
-            <Typography variant="caption" align="left">Delete</Typography>
             </MenuItem>
         }
         {edit && 
@@ -324,31 +410,54 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                             : <Link to={`/profile/${post.from}`}><Avatar aria-label="avatar" alt={name} src={avatar} className={styles.avatar}  style={{backgroundColor: color }}/></Link>
                         }
                         action={postActions}
-                        title={<Link to={`/profile/${post.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}}> {loading ? <Skeleton /> : name }</Typography></Link>}
-                        subheader={<Typography variant="subtitle2"> {loading ? <Skeleton /> : format(date) }</Typography>}
+                        title={<Link to={`/profile/${post.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}}> {loading ? <Skeleton width="100%" height="100%"/> : name }</Typography></Link>}
+                        subheader={<Typography variant="subtitle2"> {loading ? <Skeleton width="100%" height="100%"/> : format(date) }</Typography>}
                     />
                     <CardContent>
-                        <Typography variant="body2" component="p">{ loading ? <Skeleton /> : (content !== EMPTY) && content }
-                        </Typography>
+                    {
+                        edit
+                        ?
+                            loading ? <Skeleton width="100%" height="100%"/> : <RichTextField ref={inputRef} value={content}/>
+                        : 
+                            <Typography variant="body1" component="p">{ loading ? <Skeleton width="100%" height="100%"/> : (content !== EMPTY) && content }
+                            </Typography>
+                    }
                     </CardContent>
                     { loading
-                        ? <Skeleton variant="rect"></Skeleton> 
-                        : 
-                        media && <CardMedia className={styles.media} component="image" image={media}/>
+                        ? 
+                            <Skeleton variant="rect" width="100%" height="300px"></Skeleton> 
+                        :
+                            <>
+                            {
+                                edit
+                                    ?
+                                        <CardMediaSelector ref={mediaRef} selectedMedia={media} setAlert={setAlert}/>
+                                    :
+                                        media && <CardMediaContainer media={media}/>
+                            }
+                            </>
                     }
                     <CardActions disableSpacing>
                         {
                             (countersLoading || loading)
-                                ?   <Skeleton variant="rect" width={'100%'} height={16}/>
+                                ?   <Skeleton variant="rect" width="100%" height="16"/>
                                 :   <>
                                     <div className={gutterStyles.parent}>
-                                        <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike}>
-                                            { like? 
-                                                <FavoriteOutlinedIcon className={iconLabelStyles.icon} style={{fontColor: '#ff000'}} color="secondary"/> : 
-                                                <FavoriteBorderOutlinedIcon className={iconLabelStyles.icon}/>
-                                            }
-                                            {likes}
-                                        </button>    
+                                        {
+                                            likeLoading
+                                            ?
+                                                <span className={iconLabelStyles.link}>
+                                                    <CircularProgress size={20} style={{color: '#f00'}}/>
+                                                </span>
+                                            :
+                                            <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike}>
+                                                { like? 
+                                                    <FavoriteOutlinedIcon className={iconLabelStyles.icon} style={{fontColor: '#ff000'}} color="secondary"/> : 
+                                                    <FavoriteBorderOutlinedIcon className={iconLabelStyles.icon}/>
+                                                }
+                                                {likes}
+                                            </button>
+                                        }
                                         <span className={iconLabelStyles.link} onClick={ () => { expandButton && expandButton.current && expandButton.current.click()} }>
                                             <ModeCommentOutlinedIcon className={iconLabelStyles.icon} />{comments}
                                         </span>

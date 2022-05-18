@@ -13,10 +13,13 @@ const useStyles = makeStyles((theme) => ({
     },
     icon: {
         color: theme.palette.grey[400]
+    },
+    button: {
+        cursor: 'pointer'
     }
 }));
 
-const RichTextField = forwardRef(({value, minLength, maxLength}, ref) => {
+const RichTextField = forwardRef(({value, minLength, maxLength, placeholder}, ref) => {
     const styles = useStyles();
     const anchorRef = useRef();
 
@@ -54,7 +57,7 @@ const RichTextField = forwardRef(({value, minLength, maxLength}, ref) => {
                 inputProps={{ minLength: (minLength || 2),  maxLength: (maxLength || 512) }}
                 InputProps={{
                     endAdornment: (
-                        <InputAdornment position="end" onClick={toggleEmoji} >
+                        <InputAdornment position="end" onClick={toggleEmoji} className={styles.button}>
                             <EmojiEmotionsOutlinedIcon size="small" className={styles.icon} ref={anchorRef}/>
                         </InputAdornment>
                     )
@@ -65,6 +68,7 @@ const RichTextField = forwardRef(({value, minLength, maxLength}, ref) => {
                 className={styles.root}
                 variant="outlined"
                 size="small"
+                placeholder={placeholder || ''}
                 onFocus={(event) => event.target.selectionStart = event.target.value.length}
                 autoFocus
             />

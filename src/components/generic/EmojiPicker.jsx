@@ -7,7 +7,12 @@ const EmojiPicker = (props) => {
     const ref = useRef();
 
     useEffect(() => {
-        new Picker({ ...props, data, ref })
+        try {
+            new Picker({ ...props, data, ref })
+        }
+        catch(error) {
+            console.log(error);
+        }
     }, []);
     
     return <div ref={ref} />
