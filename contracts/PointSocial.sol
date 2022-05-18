@@ -276,6 +276,18 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         return true;
     }
 
+    function checkLikeToPost(uint256 postId) public view returns(bool) {
+        uint256[] memory _likeIdsOnPost = likeIdsByPost[postId];
+
+        for (uint256 i = 0; i < _likeIdsOnPost.length; i++) {
+            if(likeById[_likeIdsOnPost[i]].from == msg.sender) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function setProfile(bytes32 name_, bytes32 location_, bytes32 about_, bytes32 avatar_, bytes32 banner_) public {
         profileByOwner[msg.sender].displayName = name_;
         profileByOwner[msg.sender].displayLocation = location_;
