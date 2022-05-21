@@ -1,63 +1,72 @@
 import "./feed.css";
-import { useState,useEffect } from "react";
-import { useAppContext } from '../../context/AppContext';
+import { useState, useEffect } from "react";
 import useInView from 'react-cool-inview'
-import Post from "../post/Post";
-import Share from "../share/Share";
-import Identity from "../identity/Identity";
-
-import Backdrop from '@material-ui/core/Backdrop';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import Snackbar from '@material-ui/core/Snackbar';
-import MuiAlert from '@material-ui/lab/Alert';
+import { makeStyles } from '@material-ui/core/styles';
 
 import unionWith from "lodash/unionWith";
 import isEqual from "lodash/isEqual";
 
-import { makeStyles } from '@material-ui/core/styles';
+import { Box, Typography } from '@material-ui/core';
 
-const EMPTY_TEXT = '0x0000000000000000000000000000000000000000000000000000000000000000';
-const EMPTY_MEDIA = '0x0000000000000000000000000000000000000000000000000000000000000000';
-const NUM_POSTS_PER_CALL = 20;
+import HourglassEmptyOutlinedIcon from '@material-ui/icons/HourglassEmptyOutlined';
+import CircularProgressWithIcon from '../generic/CircularProgressWithIcon';
+import InboxOutlinedIcon from '@material-ui/icons/InboxOutlined';
+import PostCard from "../post/PostCard";
+
+const NUM_POSTS_PER_CALL = 10;
 
 const useStyles = makeStyles((theme) => ({
   root: {
+    padding: 0, 
+    margin: 0, 
+    marginTop: '10px',
+    maxWidth: '900px'
+  },
+  observer: {
     display: 'flex',
-    alignItems: 'center',
+/*    alignItems: 'center',*/
     justifyContent: 'center'
+  },
+  empty: {
+    padding: theme.spacing(2, 2),
+    display: "flex",
+    flexDirection: "column",
+/*    alignItems:"center",
+    justifyContent: "center"*/        
   },
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
-    color: '#fff',
-  },  
+  },
+  container: {
+    display: "flex",
+    height: "100%",
+    minHeight: "50vh",
+    flexDirection: "column",
+    /*justifyContent: "center"*/        
+  },
+  separator: {
+    marginTop: "20px",
+    marginBottom: "20px",
+  }
 }));
 
-function Alert(props) {
-  return <MuiAlert elevation={6} variant="filled" {...props} />;
-}
-
-const Feed = ({account}) => {
+const Feed = ({ account, setAlert, setUpperLoading, reload }) => {
 
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
-      if(numPosts === posts.length) return;
+      if(length === posts.length) return;
       unobserve();
       await getPosts();
       observe();
     }
   });
-  const classes = useStyles();
+  const styles = useStyles();
   const [posts, setPosts] = useState([])
-  const [numPosts, setNumPosts] = useState();
-  const [loading, setLoading] = useState(true);
-  const [pageLoading, setPageLoading] = useState(false);
-  const [feedError, setFeedError] = useState(undefined);
-  const [alert, setAlert] = useState(false);
-  
-  const { walletAddress } = useAppContext();
-  
+  const [length, setLength] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  // sorts accending (newest first)
   const compareByTimestamp = ( post1, post2 ) => {
-    // sorts accending (newest first)
     if ( post1.createdAt < post2.createdAt ){
       return 1;
     }
@@ -72,126 +81,117 @@ const Feed = ({account}) => {
     console.log('@@@@@@@@@@account',account)
   },[posts,account]);
 
-  useEffect(() => {
-     getPostsLength();
-  }, []);
-
-  const handleAlert = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setAlert(false);
-  };
+  useEffect(()=>{
+    reloadPosts();
+  }, [reload]);
 
   const getPostsLength = async() => {
-    const response = account? 
+    try {
+      setLoading(true);
+      const { data } = account? 
       await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsByOwnerLength', params: [account]}) :
       await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsLength', params:[]});
-      setNumPosts(Number(response.data));
+      setLength(Number(data));
+    }
+    catch(error) {
+      console.log(error.message);
+      setAlert(error.message);
+    }
+    setLoading(false);
   }
 
   const fetchPosts = async (onlyNew = false) => {
     try {
-      const response = account
-        ? await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPostsByOwner', params: [account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL]}) :
-        await window.point.contract.call({contract: 'PointSocial', method: 'getPaginatedPosts', params:[onlyNew?0:posts.length,NUM_POSTS_PER_CALL]})
-      const _posts = response.data.filter(r => (parseInt(r[4]) !== 0)).map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
-          {id, from, contents, image, createdAt: createdAt*1000, likesCount, commentsCount}
+      setLoading(true);
+  
+      const { data } = account
+      ? 
+        await window.point.contract.call(
+          {contract: 'PointSocial',
+           method: 'getPaginatedPostsByOwner', 
+           params: [account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL]}) 
+      :
+        await window.point.contract.call(
+          {contract: 'PointSocial', 
+           method: 'getPaginatedPosts', 
+           params:[onlyNew?0:posts.length,NUM_POSTS_PER_CALL]})
+
+      const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
+        .map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
+          {id, from, contents, image, createdAt: createdAt*1000, likesCount:parseInt(likesCount), commentsCount:parseInt(commentsCount)}
         )
-      )
+      );
 
-      const postsContent = await Promise.all(_posts.map(async (post) => {
-          try {
-              const {data: contents} = (post.contents === EMPTY_TEXT)? '' : await window.point.storage.getString({ id: post.contents, encoding: 'utf-8' });
-              const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: post.from});
-              post.identity = identity;
-              post.contents = contents;
-          } catch (e) {
-              console.error('Failed to load post ' + JSON.stringify(post));
-              post.contents = 'Failed to load post';
-          }
-        return post;
-      }))
-
-      return postsContent;
-    } catch(e) {
-      console.error('Error loading feed: ', e.message);
+      return newPosts;
+    } catch(error) {
+      console.log(error.message);
+      setAlert(error.message);
+    }
+    finally {
       setLoading(false);
-      setFeedError(e);
-      setAlert(true);
     }
   }
 
   const getPosts = async (loadNew = false) => {
-    setLoading(true);
-    const posts = await fetchPosts(loadNew);
-    setPosts(prev => {
-      const result = unionWith(prev, posts, isEqual);
-      result.sort(compareByTimestamp);
-      return result;
-    });
-    setLoading(false);
-  }
-
-  // function reloads the post by id and updates the likes count of the object in state
-  const reloadPostCounts = async(id) => {
-    let post = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [id]});
-    const updatedPosts = [...posts];
-    updatedPosts.filter((post) => post.id === id)[0].likesCount = post.data[5];
-    updatedPosts.filter((post) => post.id === id)[0].commentsCount = post.data[6];
-    setPosts(updatedPosts);
-    return [post.data[5], post.data[6]];
-  }
-
-  //TODO: temporary fix, it should wait until transaction is confirmed and read from smartcontract
-  const reloadPostContent = async(id, contents, image) => {
-    const updatedPosts = [...posts];
-    updatedPosts.filter((post) => post.id === id)[0].contents = contents;
-    if (image !== EMPTY_MEDIA) {
-      updatedPosts.filter((post) => post.id === id)[0].image = image;
+    try {
+      console.log("getPosts");
+      setLoading(true);
+      const posts = await fetchPosts(loadNew);
+      setPosts(prev => {
+        const result = unionWith(prev, posts, isEqual);
+        result.sort(compareByTimestamp);
+        return result;
+      });
     }
-    setPosts(updatedPosts);
+    catch(error) {
+      console.log(error);
+      setAlert(error.message);
+    }
+    finally {
+      setLoading(false);
+    }
   }
 
   const reloadPosts = async () => {
-    setPageLoading(true);
+    await getPostsLength();
     await getPosts(true);
-    setPageLoading(false);
   }
 
-  const renderDeletedPostImmediate = async (postId) => {
-    setLoading(true);
-    const updatedPosts = [...posts];
-    updatedPosts.filter((post) => post.id === postId)[0].createdAt = 0;
-    setLoading(false);
+  const deletePost = async (postId) => {
+    await getPostsLength();
+    setPosts((posts) => posts.filter(post => post.id !== postId));
   }
 
   return (
-    <div className="feed">
-      <div className="feedWrapper">
-        {!account && <div><Identity /><Share reloadPosts={reloadPosts}/></div>}
-        {(!loading && !feedError && posts.length === 0) && <span className='no-post-to-show'>No posts made yet!</span>}
-        {posts.filter(p => p.createdAt > 0).map((p) => (
-          <Post 
-            key={p.id}
-            post={p}
-            reloadPostCounts={reloadPostCounts}
-            reloadPostContent={reloadPostContent}
-            renderDeletedPostImmediate={renderDeletedPostImmediate}/>
-        ))}
-        <div ref={observe} className={classes.root}>
-          {loading &&<CircularProgress/>}
-        </div>
-      </div>
-      <Backdrop className={classes.backdrop} open={pageLoading}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
-      <Snackbar open={alert} autoHideDuration={6000} onClose={handleAlert}>
-        <Alert onClose={handleAlert} severity="error">
-          Error loading feed: {feedError && feedError.message}. Did you deploy the contract sucessfully?
-        </Alert>
-      </Snackbar>
+    <div className={styles.root}>
+        <Box className={styles.container}>
+          { !loading &&
+              <> {
+                  (length === 0)
+                  ?
+                    <Box color="text.disabled" display="flex" justifyContent="center" alignItems="center" height="100%" >
+                        <div className={styles.empty}>
+                            <InboxOutlinedIcon style={{ fontSize: 32 }} />
+                            <Typography variant="caption">No posts yet. Be the first!</Typography>
+                        </div>
+                    </Box>
+                  :
+                    posts.filter(post => post.createdAt > 0).map((post) => (
+                        <div key={post.id} className={styles.separator}>
+                          <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} canExpand={false} parentDeletePost={deletePost}/>
+                        </div>
+                    ))
+              } </>
+          }
+          <div ref={observe} className={styles.observer}>
+          {
+            loading && 
+            <CircularProgressWithIcon icon={<HourglassEmptyOutlinedIcon />} props={{color : "inherit"}} />
+          }
+          </div>
+        </Box>
     </div>
   );
+
 }
 export default Feed

@@ -11,6 +11,7 @@ import ModeCommentOutlinedIcon from '@material-ui/icons/ModeCommentOutlined';
 import { Link } from "wouter";
 
 import RichTextField from '../generic/RichTextField';
+import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
 
 import CancelOutlinedIcon from '@material-ui/icons/CancelOutlined';
 import EditOutlinedIcon from '@material-ui/icons/EditOutlined';
@@ -22,14 +23,21 @@ import LanguageOutlinedIcon from '@material-ui/icons/LanguageOutlined';
 
 import { format } from "timeago.js";
 
-import {Avatar, 
-        Backdrop,
+import image from '../../assets/image.jpeg';
+
+import {Backdrop,
+        Button,
         Card,
         CardActions, 
         CardContent,
         CardHeader,
         CircularProgress,
         Collapse,
+        Dialog,
+        DialogActions,
+        DialogContent,
+        DialogContentText,
+        DialogTitle,        
         IconButton,
         Menu,
         MenuItem,
@@ -43,6 +51,7 @@ import ShareOutlinedIcon from '@material-ui/icons/ShareOutlined';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 
+import UserAvatar from '../avatar/UserAvatar';
 import CommentList from '../comments/CommentList';
 import CardMediaSelector from '../generic/CardMediaSelector';
 import CardMediaContainer from '../generic/CardMediaContainer';
@@ -62,15 +71,16 @@ const useStyles = makeStyles((theme) => ({
     },
     media: {
         height: 0,
-        minHeight: '450px',
-        maxHeight: '500px',
+        minHeight: '250px',
+        maxHeight: '300px',
         paddingTop: '56.25%', // 16:9
         objectFit: 'contain',
         backgroundSize: 'contain',
     },
     editor: {
-        height: '450px',
-        maxHeight: '500px',
+        height: '250px',
+        minHeight: '250px',
+        maxHeight: '300px',
         objectFit: 'contain',
         backgroundSize: 'contain',
         backgroundColor: '#ccc',
@@ -78,8 +88,8 @@ const useStyles = makeStyles((theme) => ({
     image: {
         objectFit: 'contain',
         backgroundSize: 'contain',
-        minHeight: '450px',
-        maxHeight: '500px',
+        minHeight: '250px',
+        maxHeight: '300px',
     },
     expand: {
         transform: 'rotate(0deg)',
@@ -110,16 +120,17 @@ function DataURIToBlob(dataURI) {
 }
 
 
-const PostCard = ({post, setUpperLoading, setAlert}) => {
+const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpanded=false, parentDeletePost}) => {
 
     const [loading, setLoading] = useState(true);
     const [countersLoading, setCountersLoading] = useState(true);
 
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(startExpanded);
     const [actionsOpen, setActionsOpen] = useState(false);
     const [shareOpen, setShareOpen] = useState(false);
     const [edit, setEdit] = useState(false);
-  
+    const [prompt, showPrompt] = useState(false);
+
     const styles = useStyles();
     const inputRef = useRef();
     const mediaRef = createRef();
@@ -127,10 +138,9 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
     
-    const { walletAddress, profile, identity } = useAppContext();
+    const { walletAddress, profile, identity, goHome} = useAppContext();
 
     const [name, setName] = useState();
-    const [avatar, setAvatar] = useState(EMPTY);
     const [color, setColor] = useState(`#${post.from.slice(-6)}`);
 
     const [content, setContent] = useState();
@@ -154,8 +164,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const loadPost = async () => {
 
         if (post.from === walletAddress) {
-            setName(profile.displayName || identity);
-            setAvatar(`/_storage/${profile.avatar}`);
+            setName((profile && profile.displayName) || identity);
         }
         else {
             try {
@@ -163,7 +172,6 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                 const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: post.from});
                 const {data: name} = (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' });
                 setName(name);
-                setAvatar(`/_storage/${profile[3]}`);
             }
             catch(error) {
                 setAlert(error.message);
@@ -180,16 +188,16 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
 
             const {data: isLiked} = await window.point.contract.call({contract: 'PointSocial', method: 'checkLikeToPost', params: [post.id]});
             setLike(isLiked);
-
-            setDate(post.createdAt*1000);
-            setLikes(post.likesCount);
-            setComments(post.commentsCount);
-
             setCountersLoading(false);
         }
         catch(error) {
             setAlert(error.message);
         }
+
+        setDate(post.createdAt);
+        setLikes(post.likesCount);
+        setComments(post.commentsCount);
+        setComments(post.commentsCount);
 
         setCountersLoading(false);
         setLoading(false);
@@ -208,7 +216,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
             cancelEdit();
           break;
           case 'delete':
-            deletePost();
+            showPrompt(true);
           break;
         }
         setActionsOpen(false);  
@@ -233,7 +241,20 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     }
 
     const deletePost = async () => {
-        setEdit(false);
+        try {
+            setLoading(true);
+            await window.point.contract.send({contract: 'PointSocial', method: 'deletePost', params: [post.id]});
+            if (parentDeletePost) {
+                parentDeletePost(post.id);
+            }
+            else {
+                await goHome();
+            }
+        }
+        catch(error) {
+            setAlert(error.message);
+            setLoading(false);
+        }
     };
 
     const cancelEdit = async () => {
@@ -308,7 +329,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
 
             //TODO: Change to events
             const {data} = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [post.id]});
-            setLikes(data[5]);
+            setLikes(parseInt(data[5]));
         }
         catch(error) {
             setAlert(error.message);
@@ -316,6 +337,12 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
         finally {
             setLikeLoading(false);
         }
+    }
+
+    const reloadCount = async () => {
+        const {data} = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [post.id]});
+        setLikes(parseInt(data[5]));
+        setComments(parseInt(data[6]));
     }
 
     const handleActionsOpen = () => {
@@ -337,6 +364,30 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
     const handleExpandClick = () => {
         setExpanded(!expanded);
     };
+
+    const dialog = <>
+        <Dialog
+            open={prompt}
+            aria-labelledby="alert-dialog-prompt-delete"
+            aria-describedby="alert-dialog-description"
+        >
+            <DialogTitle id="alert-dialog-title">{"Delete post?"}</DialogTitle>
+            <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+                Are you sure you want to delete this post? This action cannot be undone
+            </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+            <Button onClick={() => showPrompt(false)} color="primary">
+                Cancel
+            </Button>
+            <Button onClick={deletePost} color="primary" autoFocus>
+                Ok
+            </Button>
+            </DialogActions>
+        </Dialog>
+    </>
+
     
     const postActions = <>
         <IconButton aria-label="post-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen}><MoreVertIcon /></IconButton>
@@ -347,7 +398,7 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
             getContentAnchorEl={null}
             onClose={handleActionsClose}
             open={actionsOpen}>
-        {!edit && 
+        {!edit &&
             <MenuItem onClick={(event) => handleAction('edit')}>
             <ListItemIcon style={{margin: 0}}>
                 <EditOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -355,8 +406,16 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
             <Typography variant="caption" align="left">Edit</Typography>
             </MenuItem>
         }
-        {edit && 
+        {!edit && 
             <MenuItem onClick={(event) => handleAction('delete')}>
+            <ListItemIcon style={{margin: 0}}>
+                <DeleteOutlineOutlinedIcon fontSize="small" style={{margin: 0}}/>
+            </ListItemIcon>
+            <Typography variant="caption" align="left">Delete</Typography>
+            </MenuItem>
+        }
+        {edit && 
+            <MenuItem onClick={(event) => handleAction('cancel')}>
             <ListItemIcon style={{margin: 0}}>
                 <CancelOutlinedIcon fontSize="small" style={{margin: 0}}/>
             </ListItemIcon>
@@ -401,15 +460,12 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
         <>
             <div style={{ position: "relative" }}>
                 <Backdrop className={styles.backdrop} open={loading}>
-                    <CircularProgress color="inherit" />
+                    <CircularProgress color="primary" />
                 </Backdrop>
                 <Card elevation={8} className={styles.card}>
                     <CardHeader
-                        avatar={loading
-                            ? <Skeleton variant="circle"><Avatar /></Skeleton>
-                            : <Link to={`/profile/${post.from}`}><Avatar aria-label="avatar" alt={name} src={avatar} className={styles.avatar}  style={{backgroundColor: color }}/></Link>
-                        }
-                        action={walletAddress === post.from && postActions}
+                        avatar={<UserAvatar  address={post.from} upperLoading={loading} setAlert={setAlert}/>}
+                        action={((walletAddress === post.from) && (post.commentsCount === 0)) && postActions}
                         title={<Link to={`/profile/${post.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}}> {loading ? <Skeleton width="100%" height="100%"/> : name }</Typography></Link>}
                         subheader={<Typography variant="subtitle2"> {loading ? <Skeleton width="100%" height="100%"/> : format(date) }</Typography>}
                     />
@@ -446,9 +502,11 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                                         {
                                             likeLoading
                                             ?
-                                                <span className={iconLabelStyles.link}>
-                                                    <CircularProgress size={20} style={{color: '#f00'}}/>
-                                                </span>
+                                            <button type={'button'} className={iconLabelStyles.link}>
+                                                <CircularProgressWithIcon 
+                                                    icon={<FavoriteBorderOutlinedIcon style={{ color: '#f00', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
+                                                    props={{size : 16, style: {color: '#f00', marginLeft: '8px', marginBottom: '8px', }  }} />
+                                            </button>                                                    
                                             :
                                             <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike}>
                                                 { like? 
@@ -458,9 +516,10 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                                                 {likes}
                                             </button>
                                         }
-                                        <span className={iconLabelStyles.link} onClick={ () => { expandButton && expandButton.current && expandButton.current.click()} }>
-                                            <ModeCommentOutlinedIcon className={iconLabelStyles.icon} />{comments}
-                                        </span>
+                                        <button type={'button'} className={iconLabelStyles.link} onClick={()=>(canExpand)? expandButton && expandButton.current && expandButton.current.click(): window.open(`/post/${post.id}`, "_blank")}>
+                                            <ModeCommentOutlinedIcon className={iconLabelStyles.icon} />
+                                            {comments}
+                                        </button>
                                         <span className={iconLabelStyles.link} aria-label="share" aria-haspopup="true" ref={shareAnchor} onClick={handleShareOpen}>
                                             <ShareOutlinedIcon className={iconLabelStyles.icon} />
                                         </span>
@@ -468,20 +527,23 @@ const PostCard = ({post, setUpperLoading, setAlert}) => {
                                     { shareActions }                                
                                     </>
                         }                        
-                        <IconButton
-                            className={clsx(styles.expand, { [styles.expandOpen]: expanded, })}
-                            onClick={handleExpandClick}
-                            aria-expanded={expanded}
-                            aria-label="expand"
-                            ref={expandButton}
-                            >
-                            <ExpandMoreIcon />
-                        </IconButton>
+                        {   canExpand && 
+                            <IconButton
+                                className={clsx(styles.expand, { [styles.expandOpen]: expanded, })}
+                                onClick={handleExpandClick}
+                                aria-expanded={expanded}
+                                aria-label="expand"
+                                ref={expandButton}
+                                >
+                                <ExpandMoreIcon />
+                            </IconButton>
+                        }
                     </CardActions>
-                    <Collapse in={expanded} timeout="auto" unmountOnExit style={{ width:'100%'}}>
-                        <CommentList postId={post.id} setUpperLoading={setLoading} setAlert={setAlert}/>
+                    <Collapse in={expanded} timeout="auto" unmountOnExit style={{ width:'100%', height: '100%'}}>
+                        <CommentList postId={post.id} setUpperLoading={setLoading} setAlert={setAlert} reloadCount={reloadCount}/>
                     </Collapse>
                 </Card>
+                {dialog}
             </div>
         </>
     )
