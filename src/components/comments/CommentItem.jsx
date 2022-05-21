@@ -15,9 +15,7 @@ import CollapsibleTypography from '../generic/CollapsibleTypography';
 import UserAvatar from '../avatar/UserAvatar';
 import RichTextField from '../generic/RichTextField';
 
-import {Backdrop, 
-        Button,
-        CircularProgress,
+import {Button,
         Dialog,
         DialogActions,
         DialogContent,
@@ -59,12 +57,16 @@ const useStyles = makeStyles((theme) => ({
     },
     inline: {
         display: 'inline',
+    },
+    item: {
+        listStyleType: "none"
     }
+    
 }));
 
-const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, setAlert}) => {
+const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded = false, preloadedData}) => {
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     const [actionsOpen, setActionsOpen] = useState(false);
     const [edit, setEdit] = useState(false);
@@ -75,8 +77,6 @@ const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, set
     const { walletAddress, profile, identity } = useAppContext();
 
     const [name, setName] = useState();
-    const [avatar, setAvatar] = useState(EMPTY);
-
     const [content, setContent] = useState();
     const [date, setDate] = useState();
 
@@ -84,14 +84,24 @@ const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, set
     const inputRef = useRef();
     
     useEffect(() => {
-        loadComment();
+        if (preloaded) { setPreloadedComment() }
+        else { loadComment() }
     }, []);
+
+    const setPreloadedComment = () => {
+        setName((comment.from === walletAddress)? 
+                ((profile && profile.displayName)||identity):
+                preloadedData.name);
+        setDate(comment.createdAt);
+        setContent(preloadedData.contents);
+    };
 
     const loadComment = async () => {
 
+        setLoading(true);
+
         if (comment.from === walletAddress) {
-            setName(profile.displayName || identity);
-            setAvatar(`/_storage/${profile.avatar}`);
+            setName((profile && profile.displayName)||identity);
         }
         else {
             try {
@@ -99,7 +109,6 @@ const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, set
                 const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: comment.from});
                 const {data: name} = (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' });
                 setName(name);
-                setAvatar(`/_storage/${profile[3]}`);
             }
             catch(error) {
                 setAlert(error.message);
@@ -109,7 +118,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, set
         setDate(comment.createdAt);
 
         try {
-            const {data: contents} = (comment.contents === EMPTY)? {data:EMPTY} : await window.point.storage.getString({ id: comment.contents, encoding: 'utf-8' });
+            const {data: contents} = (comment.contents === EMPTY)? {data:""} : await window.point.storage.getString({ id: comment.contents, encoding: 'utf-8' });
             setContent(contents);
         }
         catch(error) {
@@ -254,47 +263,49 @@ const CommentItem = ({postId, comment, parentDeleteComment, setUpperLoading, set
     </>
 
     return (
-        <>
-            <div style={{ position: "relative"}}>
-                {/*<Backdrop className={styles.backdrop} open={loading}>
-                    <CircularProgress color="inherit" />
-                </Backdrop>*/}
-                <ListItem alignItems={edit?"center":"flex-start"} > 
-                    <ListItemAvatar>
-                        <UserAvatar  address={comment.from} upperLoading={loading} setAlert={setAlert}/>
-                    </ListItemAvatar>
-                    {
-                        edit
-                        ?
-                            loading ? <Skeleton width="100%" height="100%"/> : <RichTextField ref={inputRef} value={content}/>
-                        : 
-                            <>                        
-                                <ListItemText 
-                                    primary={
-                                        <>
-                                            <Link to={`/profile/${comment.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}} display="inline"> {loading ? <Skeleton /> : name }</Typography></Link>
-                                            <Typography variant="caption" display="inline" color="textSecondary"> {loading ? <Skeleton /> : format(date) }</Typography>
-                                        </>                    
-                                    }
-                                    secondary={
+        <div style={{ position: "relative"}}>
+            <ListItem alignItems={edit?"center":"flex-start"} component="div" className={styles.item}> 
+                <ListItemAvatar>
+                    <UserAvatar address={comment.from} upperLoading={loading} setAlert={setAlert}/>
+                </ListItemAvatar>
+                {
+                    edit
+                    ?
+                        loading ? <Skeleton width="100%" height="100%"/> : <RichTextField ref={inputRef} value={content}/>
+                    : 
+                        <>                        
+                            <ListItemText 
+                                primary={
+                                    <>
+                                        <Link to={`/profile/${comment.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}} display="inline"> {loading ? <Skeleton /> : name }</Typography></Link>
+                                        <Typography variant="caption" display="inline" color="textSecondary" style={{ marginLeft: '8px', marginRight: '6px' }}>•</Typography>
+                                        <Typography variant="caption" display="inline" color="textSecondary"> {loading ? <Skeleton /> : format(date) }</Typography>
+                                    </>                    
+                                }
+                                secondary={
+                                    (content === "")
+                                    ?
+                                        <Typography component="span" variant="caption" color="textSecondary" align="left" noWrap={true}>
+                                            {loading ? <Skeleton /> : "(empty comment)" }
+                                        </Typography>
+                                    :
                                         <CollapsibleTypography content={content} loading={loading}/>
-                                    }
-                                />
-                            </>
-                    }
-                    {
-                        !loading &&  walletAddress === comment.from &&
-                        <ListItemSecondaryAction className={styles.action}>
-                            <IconButton edge="end" size="small" aria-label="comment-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen}>
-                                <MoreHorizOutlinedIcon fontSize="small"/>
-                            </IconButton>
-                            { commentActions }
-                        </ListItemSecondaryAction>
-                    }
-                </ListItem>
-            </div>
+                                }
+                            />
+                        </>
+                }
+                {
+                    !loading &&  walletAddress === comment.from &&
+                    <ListItemSecondaryAction className={styles.action}>
+                        <IconButton edge="end" size="small" aria-label="comment-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen}>
+                            <MoreHorizOutlinedIcon fontSize="small"/>
+                        </IconButton>
+                        { commentActions }
+                    </ListItemSecondaryAction>
+                }
+            </ListItem>
             {dialog}
-        </>
+        </div>
     )
 }
 
