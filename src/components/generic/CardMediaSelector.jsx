@@ -53,7 +53,7 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const CardMediaSelector = forwardRef(({ selectedMedia, setAlert }, ref) => {
+const CardMediaSelector = forwardRef(({ selectedMedia, setAlert, loading=false }, ref) => {
 
     const styles = useStyles();
     const [media, setMedia] = useState(selectedMedia);
@@ -111,12 +111,17 @@ const CardMediaSelector = forwardRef(({ selectedMedia, setAlert }, ref) => {
             <div className={styles.frame}>
                 {(mediaType === 'image') && <img className={styles.image} src={media} onError={onMediaError} alt=""/>}
                 {(mediaType === 'video') && <video className={styles.video} controls><source src={media} onError={onMediaError}></source></video>}
-                {!media && <Fab aria-label="add" size="large" className={styles.fab} onClick={()=>selectFile()}>
-                    <AddPhotoAlternateOutlinedIcon fontSize="large" style={{color: '#fff', fontColor: '#fff'}}/>
-                </Fab>}
-                {media && <Fab aria-label="remove" size="large" className={styles.fab} onClick={removeSelection}>
-                    <RemoveCircleOutlineOutlinedIcon fontSize="large" style={{color: '#fff', fontColor: '#fff'}}/>
-                </Fab>}
+                {
+                    !loading &&
+                    <>
+                        {!media && <Fab aria-label="add" size="large" className={styles.fab} onClick={()=>selectFile()}>
+                            <AddPhotoAlternateOutlinedIcon fontSize="large" style={{color: '#fff', fontColor: '#fff'}}/>
+                        </Fab>}
+                        {media && <Fab aria-label="remove" size="large" className={styles.fab} onClick={removeSelection}>
+                            <RemoveCircleOutlineOutlinedIcon fontSize="large" style={{color: '#fff', fontColor: '#fff'}}/>
+                        </Fab>}
+                    </>    
+                }
             </div>
             <input ref={mediaRef} accept="image/*,video/*" type="file" hidden onChange={handleFileUpload} />
         </Box>

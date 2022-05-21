@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { makeStyles } from '@material-ui/core/styles';
 
-import {Box} from '@material-ui/core';
+import {Box, Dialog, IconButton} from '@material-ui/core';
+import FullscreenOutlinedIcon from '@material-ui/icons/FullscreenOutlined';
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -37,14 +38,26 @@ const useStyles = makeStyles((theme) => ({
         height: '450px',
         maxHeight: '500px',
         borderRadius: '4px',
-    }
+    },
+    panel: {
+        display:'flex',
+        alignItems:'flex-end',
+        justifyContent:'flex-end',
+        justify:'flex-end',
+    },
+    fullscreen: {
+        objectFit: 'contain',
+        width: '100%',
+        height: '100',
+    },
 }));
 
 const CardMediaContainer = ({ media }) => {
 
     const styles = useStyles();
     const [mediaType, setMediaType] = useState('image');
-
+    const [fullscreen, setFullscreen] = useState(false);
+    
     const onMediaError = (e) => {
         if (mediaType === 'video') {
             setMediaType('image');
@@ -54,12 +67,24 @@ const CardMediaContainer = ({ media }) => {
         }
     }
 
+    const toggleFullScreen = () => {
+        setFullscreen(!fullscreen);
+    }
+
     return (
         <Box className={styles.root}>
             <div className={styles.frame}>
                 {(mediaType === 'image') && <img className={styles.image} src={media} onError={onMediaError} alt=""/>}
                 {(mediaType === 'video') && <video className={styles.video} controls><source src={media} onError={onMediaError}></source></video>}
             </div>
+            <div className={styles.panel}>
+                {(mediaType === 'image') && <IconButton color="primary" aria-label="fullscreen" size="small" edge="end" onClick={toggleFullScreen}>
+                    <FullscreenOutlinedIcon fontSize="small"/>
+                </IconButton>}
+            </div>
+            <Dialog maxWidth={false} open={fullscreen}>
+                <img className={styles.fullscreen} src={media} onError={onMediaError} alt="" onClick={toggleFullScreen}/>                
+            </Dialog>
         </Box>
     );
 };
