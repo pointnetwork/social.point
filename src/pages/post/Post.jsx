@@ -1,17 +1,23 @@
-import Topbar from "../../components/topbar/Topbar";
+import Appbar from "../../components/topbar/Appbar";
 import { useRoute } from "wouter";
 import { useEffect, useState } from "react";
+import { useAppContext } from '../../context/AppContext';
 import { makeStyles } from '@material-ui/core/styles';
+
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Backdrop from '@material-ui/core/Backdrop';
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert from '@material-ui/lab/Alert';
 
+import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
+
 import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
 
 import SearchOutlinedIcon from '@material-ui/icons/SearchOutlined';
+import AccountBalanceWalletOutlinedIcon from '@material-ui/icons/AccountBalanceWalletOutlined';
+
 import Typography from '@material-ui/core/Typography';
 
 import PostCard from '../../components/post/PostCard';
@@ -39,6 +45,8 @@ const Post = () => {
     const [alert, setAlert] = useState("");
     const [post, setPost] = useState();
     
+    const { walletAddress } = useAppContext();
+
     const styles = useStyles();
   
     const handleAlert = (event, reason) => {
@@ -46,7 +54,7 @@ const Post = () => {
           return;
         }
         setAlert("");
-    };    
+    };   
     
     const getPost = async () => {
         try {
@@ -59,9 +67,9 @@ const Post = () => {
                     from: post[1],
                     contents: post[2],
                     image: post[3],
-                    createdAt: post[4],
-                    likesCount: post[5],
-                    commentsCount: post[6],
+                    createdAt: parseInt(post[4])*1000,
+                    likesCount: parseInt(post[5]),
+                    commentsCount: parseInt(post[6]),
                 })
             }
           }
@@ -78,33 +86,39 @@ const Post = () => {
         getPost();
     }, []);
 
+    const main = (post)?
+    <Container fixed={false} className={styles.container}>
+        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={true}/>
+    </Container>
+    : 
+    <>
+        { !loading && 
+            <Box color="text.primary" display="flex" justifyContent="center" alignItems="center" height="90vh">
+                <div>
+                    <SearchOutlinedIcon style={{ fontSize: 120 }} />
+                    <Typography>Post not found</Typography>
+                </div>
+            </Box>
+        }                
+    </>
+
     return (
-        <>
-            <Topbar />
-            <Backdrop className={styles.backdrop} open={loading}>
-                <CircularProgress color="inherit" />
+        <div style={{ padding: 0, margin: 0}}>
+            { walletAddress && <Appbar setAlert={setAlert} setLoading={setLoading}/> }
+            <Backdrop className={styles.backdrop} open={loading || !walletAddress}>
+                {
+                    walletAddress? 
+                    <CircularProgress color="inherit" />:
+                    <CircularProgressWithIcon icon={<AccountBalanceWalletOutlinedIcon/>} props={{color : 'inherit'}} />
+                }
             </Backdrop>
-            { (post)? 
-                <>
-                    <Container fixed={false} className={styles.container}>
-                        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} />
-                    </Container>
-                </>: 
-                <>
-                    { !loading && 
-                        <Box color="text.primary"  display="flex" justifyContent="center" alignItems="center" height="90vh">
-                            <div>
-                                <SearchOutlinedIcon style={{ fontSize: 120 }} />
-                                <Typography>Post not found</Typography>
-                            </div>
-                        </Box>
-                    }                
-                </> 
-            }            
+            {
+                walletAddress && main
+            }
             <Snackbar open={!(alert === "")} autoHideDuration={6000} onClose={handleAlert}>
                 <Alert onClose={handleAlert} severity={alert.split("|")[1]||"error"}>{ alert.split("|")[0] }</Alert>
             </Snackbar>
-        </>
+        </div>
     );
 }
 
