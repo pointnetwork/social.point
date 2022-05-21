@@ -134,7 +134,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     }
 
     function getAllPostsLength() public view returns (uint256) {
-        return postIds.length;
+        uint256 length = 0;
+        for (uint256 i = 0; i < postIds.length; i++) {
+            if (postById[postIds[i]].createdAt > 0) {
+                length++;
+            }
+        }
+        return length;
     }
 
     function getPaginatedPosts(uint256 cursor, uint256 howMany) public view returns (Post[] memory) {
@@ -163,7 +169,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     }
 
     function getAllPostsByOwnerLength(address owner) public view returns (uint256) {
-        return postIdsByOwner[owner].length;
+        uint256 length = 0;
+        for (uint256 i = 0; i < postIdsByOwner[owner].length; i++) {
+            if (postById[postIdsByOwner[owner][i]].createdAt > 0) {
+                length++;
+            }
+        }
+        return length;
     }
 
     function getPaginatedPostsByOwner(address owner, uint256 cursor, uint256 howMany)
