@@ -416,6 +416,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
       setEdit(false);
       setProfile(updatedProfile);    
       setUserProfile(updatedProfile);
+      setAlert("Your profile was successfully updated!|success");
     }
     catch(error) {
       setAlert(error.message);
