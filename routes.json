@@ -4,6 +4,4 @@
     "/profile/:static.:ext": "rewrite:/:static.:ext",
     "/post/[a-zA-Z0-9]+": "index.html",
     "/post/:static.:ext": "rewrite:/:static.:ext"
-
-
 }
