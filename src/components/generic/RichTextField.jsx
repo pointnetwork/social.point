@@ -56,8 +56,8 @@ const RichTextField = forwardRef(({value, minLength, maxLength, placeholder}, re
                 maxRows={4}
                 inputProps={{ minLength: (minLength || 2),  maxLength: (maxLength || 512) }}
                 InputProps={{
-                    endAdornment: (
-                        <InputAdornment position="end" onClick={toggleEmoji} className={styles.button}>
+                    startAdornment: (
+                        <InputAdornment position="start" onClick={toggleEmoji} className={styles.button}>
                             <EmojiEmotionsOutlinedIcon size="small" className={styles.icon} ref={anchorRef}/>
                         </InputAdornment>
                     )
@@ -72,7 +72,7 @@ const RichTextField = forwardRef(({value, minLength, maxLength, placeholder}, re
                 onFocus={(event) => event.target.selectionStart = event.target.value.length}
                 autoFocus
             />
-            <Popper open={emoji} anchorEl={anchorRef.current} placement="right-end">
+            <Popper open={emoji} anchorEl={anchorRef.current}>
                 <div>
                     <EmojiPicker onEmojiSelect={addEmoji}/>
                 </div>
