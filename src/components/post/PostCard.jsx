@@ -23,8 +23,6 @@ import LanguageOutlinedIcon from '@material-ui/icons/LanguageOutlined';
 
 import { format } from "timeago.js";
 
-import image from '../../assets/image.jpeg';
-
 import {Backdrop,
         Button,
         Card,
