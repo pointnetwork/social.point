@@ -12,7 +12,7 @@ import {Box,
 
 import Skeleton from '@material-ui/lab/Skeleton';
 
-import AllInboxOutlinedIcon from '@material-ui/icons/AllInboxOutlined';
+import InboxOutlinedIcon from '@material-ui/icons/InboxOutlined';
 import RichTextField from '../generic/RichTextField';
 import SendOutlinedIcon from '@material-ui/icons/SendOutlined';
 import IconButton from '@material-ui/core/IconButton';
@@ -154,7 +154,7 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
                     ?
                     <Box color="text.disabled" display="flex" justifyContent="center" alignItems="center" height="100%" >
                         <div className={styles.empty}>
-                            <AllInboxOutlinedIcon style={{ fontSize: 32 }} />
+                            <InboxOutlinedIcon style={{ fontSize: 32 }} />
                             <Typography variant="caption">No comments yet. Be the first!</Typography>
                         </div>
                     </Box>

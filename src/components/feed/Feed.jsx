@@ -31,8 +31,8 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2, 2),
     display: "flex",
     flexDirection: "column",
-/*    alignItems:"center",
-    justifyContent: "center"*/        
+    alignItems:"center",
+    justifyContent: "center"
   },
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
@@ -50,7 +50,7 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const Feed = ({ account, setAlert, setUpperLoading, reload }) => {
+const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => {
 
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
@@ -172,7 +172,7 @@ const Feed = ({ account, setAlert, setUpperLoading, reload }) => {
                     <Box color="text.disabled" display="flex" justifyContent="center" alignItems="center" height="100%" >
                         <div className={styles.empty}>
                             <InboxOutlinedIcon style={{ fontSize: 32 }} />
-                            <Typography variant="caption">No posts yet. Be the first!</Typography>
+                            <Typography variant="caption">{`No posts yet.${ canPost? " Be the first!" : "" }`}</Typography>
                         </div>
                     </Box>
                   :

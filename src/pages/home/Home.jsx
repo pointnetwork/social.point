@@ -74,7 +74,7 @@ const Home = () => {
                     <Appbar setAlert={setAlert} setLoading={setLoading}/>
                     <Container fixed={true} className={styles.container}>
                         <ShareCard setAlert={setAlert} setReload={setReload}/>
-                        <Feed setAlert={setAlert} setUpperLoading={setLoading} reload={reload}/>
+                        <Feed setAlert={setAlert} setUpperLoading={setLoading} reload={reload} canPost={true}/>
                     </Container>
                     <Footer />
                 </>
