@@ -38,6 +38,7 @@ import PanoramaOutlinedIcon from '@material-ui/icons/PanoramaOutlined';
 
 import TabPanel from '../tabs/TabPanel';
 import Feed from '../feed/Feed';
+import UserAvatar from '../avatar/UserAvatar';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -521,7 +522,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
           </Tooltip>
           <Tooltip open={edit} title="Click to change" arrow placement="top-end">
             <Fab aria-label="edit" className={styles.fabAvatar} onClick={() => edit && uploadAvatarRef.current && uploadAvatarRef.current.click()}>
-              <Avatar alt={identity} src={avatar} className={styles.avatar} style={{backgroundColor: color }}/>
+              <UserAvatar address={address} src={avatar} link={false} setAlert={setAlert} props={{className: styles.avatar}}/>
             </Fab>
           </Tooltip>
           { edit && <input ref={uploadAvatarRef} accept="image/*" type="file" hidden onChange={handleAvatarUpload} />}

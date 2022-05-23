@@ -14,7 +14,7 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const UserAvatar = ({user, address, upperLoading, setAlert, link = true, props}) => {
+const UserAvatar = ({user, address, upperLoading, setAlert, src, link = true, props}) => {
 
     const styles = useStyles();
     const [loading, setLoading] = useState(false);
@@ -59,8 +59,8 @@ const UserAvatar = ({user, address, upperLoading, setAlert, link = true, props})
         }
     }
 
-    const userAvatar = <Avatar aria-label="avatar" alt={(name||"").toUpperCase()} src={avatar} className={styles.root} style={{backgroundColor: color }} {...props}/>
-    const ownAvatar = <Avatar aria-label="avatar" alt={(((profile && profile.displayName) || identity)||"").toUpperCase()} src={(`/_storage/${(profile && profile.avatar) || EMPTY }`)} className={styles.root} style={{backgroundColor: color }} {...props}/>
+    const userAvatar = <Avatar aria-label="avatar" alt={(name||"").toUpperCase()} src={src || avatar} className={styles.root} style={{backgroundColor: color }} {...props}/>
+    const ownAvatar = <Avatar aria-label="avatar" alt={(((profile && profile.displayName) || identity)||"").toUpperCase()} src={src || (`/_storage/${(profile && profile.avatar) || EMPTY }`)} className={styles.root} style={{backgroundColor: color }} {...props}/>
     const avatarComponent = (address === walletAddress)?ownAvatar:userAvatar;
 
     return (
