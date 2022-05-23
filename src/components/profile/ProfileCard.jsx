@@ -412,10 +412,16 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
         ]
       });
 
-      console.log(result);
-      setEdit(false);
       setProfile(updatedProfile);    
-      setUserProfile(updatedProfile);
+      setUserProfile({
+        ...updatedProfile, 
+        displayName: (displayNameRef.current && displayNameRef.current.value && displayNameRef.current.value.trim()) || name, 
+        displayLocation: (displayLocationRef.current && displayLocationRef.current.value && displayLocationRef.current.value.trim()) || location,
+        displayAbout: (displayAboutRef.current  && displayAboutRef.current.value && displayAboutRef.current.value.trim()) || about
+      });
+
+      setEdit(false);
+
       setAlert("Your profile was successfully updated!|success");
     }
     catch(error) {

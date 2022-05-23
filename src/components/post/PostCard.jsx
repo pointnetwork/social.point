@@ -462,9 +462,21 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                 </Backdrop>
                 <Card elevation={8} className={styles.card}>
                     <CardHeader
-                        avatar={<UserAvatar  address={post.from} upperLoading={loading} setAlert={setAlert}/>}
+                        avatar={<UserAvatar address={post.from} upperLoading={loading} setAlert={setAlert}/>}
                         action={((walletAddress === post.from) && (post.commentsCount === 0)) && postActions}
-                        title={<Link to={`/profile/${post.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}}> {loading ? <Skeleton width="100%" height="100%"/> : name }</Typography></Link>}
+                        title={
+                            <Link to={`/profile/${post.from}`}>
+                                <Typography variant="subtitle1" style={{cursor:'pointer'}}>
+                                {
+                                    loading 
+                                    ? 
+                                        <Skeleton width="100%" height="100%"/> 
+                                    : 
+                                        (post.from === walletAddress) ? ((profile && profile.displayName) || identity) : name
+                                }
+                                </Typography>
+                            </Link>
+                        }
                         subheader={<Typography variant="subtitle2"> {loading ? <Skeleton width="100%" height="100%"/> : format(date) }</Typography>}
                     />
                     <CardContent>

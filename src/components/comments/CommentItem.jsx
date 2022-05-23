@@ -277,7 +277,17 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
                             <ListItemText 
                                 primary={
                                     <>
-                                        <Link to={`/profile/${comment.from}`}><Typography variant="subtitle1" style={{cursor:'pointer'}} display="inline"> {loading ? <Skeleton /> : name }</Typography></Link>
+                                        <Link to={`/profile/${comment.from}`}>
+                                            <Typography variant="subtitle1" style={{cursor:'pointer'}} display="inline">
+                                            {
+                                                loading
+                                                ?
+                                                    <Skeleton />
+                                                :
+                                                    (comment.from === walletAddress) ? ((profile && profile.displayName) || identity) : name
+                                            }
+                                            </Typography>
+                                        </Link>
                                         <Typography variant="caption" display="inline" color="textSecondary" style={{ marginLeft: '8px', marginRight: '6px' }}>•</Typography>
                                         <Typography variant="caption" display="inline" color="textSecondary"> {loading ? <Skeleton /> : format(date) }</Typography>
                                     </>                    
