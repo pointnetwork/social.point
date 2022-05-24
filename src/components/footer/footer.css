@@ -1,18 +1,20 @@
 footer {
+    color: "#000";
     margin-top: 30px;
     text-align: center;
     vertical-align: center;
 }
 
 .footerContainer{
-    background-color: #e9ebee;
+    color: "#000";
+    background-color: #bbb;
     height: 35px;
     width: 100%;
-    color: white;
     font-size: 11px;
 }
 
 .footerContainer span{
+    color: "#000";
     margin: 0;
     position: relative;
     top: 30%;

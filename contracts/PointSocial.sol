@@ -134,7 +134,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     }
 
     function getAllPostsLength() public view returns (uint256) {
-        return postIds.length;
+        uint256 length = 0;
+        for (uint256 i = 0; i < postIds.length; i++) {
+            if (postById[postIds[i]].createdAt > 0) {
+                length++;
+            }
+        }
+        return length;
     }
 
     function getPaginatedPosts(uint256 cursor, uint256 howMany) public view returns (Post[] memory) {
@@ -163,7 +169,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
     }
 
     function getAllPostsByOwnerLength(address owner) public view returns (uint256) {
-        return postIdsByOwner[owner].length;
+        uint256 length = 0;
+        for (uint256 i = 0; i < postIdsByOwner[owner].length; i++) {
+            if (postById[postIdsByOwner[owner][i]].createdAt > 0) {
+                length++;
+            }
+        }
+        return length;
     }
 
     function getPaginatedPostsByOwner(address owner, uint256 cursor, uint256 howMany)
@@ -274,6 +286,18 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         emit StateChange(postId, msg.sender, block.timestamp, Action.Like);
 
         return true;
+    }
+
+    function checkLikeToPost(uint256 postId) public view returns(bool) {
+        uint256[] memory _likeIdsOnPost = likeIdsByPost[postId];
+
+        for (uint256 i = 0; i < _likeIdsOnPost.length; i++) {
+            if(likeById[_likeIdsOnPost[i]].from == msg.sender) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     function setProfile(bytes32 name_, bytes32 location_, bytes32 about_, bytes32 avatar_, bytes32 banner_) public {

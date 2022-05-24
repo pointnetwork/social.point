@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@emoji-mart/data": "^1.0.1",
     "@fontsource/roboto": "^4.5.5",
     "@material-ui/core": "^4.12.3",
     "@material-ui/icons": "^4.11.2",
@@ -15,11 +16,17 @@
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
+    "clsx": "^1.1.1",
+    "emoji-mart": "^5.0.0",
     "lodash": "^4.17.21",
     "react": "^17.0.2",
     "react-cool-inview": "^2.0.8",
     "react-dom": "^17.0.2",
+    "react-qr-code": "^2.0.7",
     "react-scripts": "4.0.3",
+    "react-virtualized-auto-sizer": "^1.0.6",
+    "react-window": "^1.8.7",
+    "react-window-infinite-loader": "^1.0.7",
     "timeago.js": "^4.0.2",
     "web-vitals": "^1.0.1",
     "wouter": "^2.7.4"
@@ -47,10 +54,16 @@
     "development": [
       "last 1 chrome version",
       "last 1 firefox version",
-      "last 1 safari version"
+      "last 1 safari version",
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
     ]
   },
   "devDependencies": {
+    "@babel/cli": "^7.17.10",
+    "@babel/core": "^7.17.10",
+    "@babel/preset-env": "^7.17.10",
     "@parcel/transformer-image": "^2.0.0-rc.0",
     "parcel": "^2.0.0-rc.0",
     "react-error-overlay": "^6.0.9"

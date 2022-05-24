@@ -1,9 +1,12 @@
-import Topbar from "../../components/topbar/Topbar";
+import Appbar from "../../components/topbar/Appbar";
 import { useRoute } from "wouter";
 import { useEffect, useState } from "react";
 import { makeStyles } from '@material-ui/core/styles';
+import { useAppContext } from '../../context/AppContext';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
+import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
+
 import Backdrop from '@material-ui/core/Backdrop';
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert from '@material-ui/lab/Alert';
@@ -11,6 +14,8 @@ import MuiAlert from '@material-ui/lab/Alert';
 import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
 import SearchOutlinedIcon from '@material-ui/icons/SearchOutlined';
+import AccountBalanceWalletOutlinedIcon from '@material-ui/icons/AccountBalanceWalletOutlined';
+
 import Typography from '@material-ui/core/Typography';
 
 import ProfileCard from "../../components/profile/ProfileCard";
@@ -29,10 +34,12 @@ const useStyles = makeStyles((theme) => ({
 
 const Profile = () => {
     const [match, params] = useRoute("/profile/:account");
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState("");
     const [identity, setIdentity] = useState(undefined);
     const [address, setAddress] = useState(undefined);
+
+    const { walletAddress } = useAppContext();
 
     const styles = useStyles();
   
@@ -44,7 +51,7 @@ const Profile = () => {
     };    
     
     const getAccount = async () => {
-
+        setLoading(true);
         try {
           const isAddress = params.account.match(/0x[a-fA-F0-9]{40}/);
           let address = null;
@@ -84,29 +91,35 @@ const Profile = () => {
 
     return (
         <>
-            <Topbar />
-            <Backdrop className={styles.backdrop} open={loading}>
-                <CircularProgress color="inherit" />
+            { walletAddress && <Appbar /> }
+            <Backdrop className={styles.backdrop} open={!walletAddress || loading}>
+            {
+                walletAddress? 
+                <CircularProgress color="inherit" />:
+                <CircularProgressWithIcon icon={<AccountBalanceWalletOutlinedIcon/>} props={{color : "inherit"}} />
+            }
             </Backdrop>
-            { (address && identity)? 
-                <>
-                    <Grid container spacing={10} direction="column" justifyContent="center" alignItems="center" style={{ minHeight: '80vh', overflow: 'auto', marginTop: "48px" }}>
-                        <ProfileCard address={address} identity={identity} setUpperLoading={setLoading} setAlert={setAlert}/>
-                    </Grid>
-                </>: 
-                <>
-                    { !loading && 
-                        <Box color="text.primary"  display="flex" justifyContent="center" alignItems="center" height="90vh">
-                            <div>
-                                <SearchOutlinedIcon style={{ fontSize: 120 }} />
-                                <Typography>Profile not found</Typography>
-                            </div>
-                        </Box>
-                    }                
-                </> 
-            }            
+            {walletAddress  && 
+              <> { (address && identity)? 
+                  <>
+                      <Grid container spacing={10} direction="column" justifyContent="center" alignItems="center" style={{ minHeight: '80vh', overflow: 'auto', marginTop: "48px" }}>
+                          <ProfileCard address={address} identity={identity} setUpperLoading={setLoading} setAlert={setAlert}/>
+                      </Grid>
+                  </>: 
+                  <>
+                      { !loading && 
+                          <Box color="text.primary"  display="flex" justifyContent="center" alignItems="center" height="90vh">
+                              <div>
+                                  <SearchOutlinedIcon style={{ fontSize: 120 }} />
+                                  <Typography>Profile not found</Typography>
+                              </div>
+                          </Box>
+                      }                
+                  </> 
+              } </> 
+            }
             <Snackbar open={!(alert === "")} autoHideDuration={6000} onClose={handleAlert}>
-                <Alert onClose={handleAlert} severity="error">{ alert }</Alert>
+                <Alert onClose={handleAlert} severity={alert.split("|")[1]||"error"}>{ alert.split("|")[0] }</Alert>
             </Snackbar>
         </>
     );
