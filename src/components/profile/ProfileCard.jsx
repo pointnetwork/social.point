@@ -40,6 +40,9 @@ import TabPanel from '../tabs/TabPanel';
 import Feed from '../feed/Feed';
 import UserAvatar from '../avatar/UserAvatar';
 
+import point from "../../services/PointSDK";
+import UserManager from "../../services/UserManager";
+
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
                
@@ -240,11 +243,11 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
     if (profile) {
       try {
         setLoading(true);
-        const {data: name} = (profile.displayName === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile.displayName, encoding: 'utf-8' });
+        const name = (profile.displayName === EMPTY)? identity : await point.getString(profile.displayName, {  encoding: 'utf-8' });
         setName(name);
-        const {data: location} = (profile.displayLocation === EMPTY)? {data:"Point Network"} : await window.point.storage.getString({ id: profile.displayLocation, encoding: 'utf-8' });
+        const location = (profile.displayLocation === EMPTY)? "Point Network" : await point.getString(profile.displayLocation, {  encoding: 'utf-8' });
         setLocation(location);
-        const {data: about} = (profile.displayAbout=== EMPTY)? {data:"Hey I'm using Point Social!"} : await window.point.storage.getString({ id: profile.displayAbout, encoding: 'utf-8' });
+        const about = (profile.displayLocation === EMPTY)? "Hey I'm using Point Social!" : await point.getString(profile.displayAbout, {  encoding: 'utf-8' });
         setAbout(about);
         setFollowers(profile.followersCount || 0);
         setFollowing(profile.followingCount || 0);
@@ -260,7 +263,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
 
   const loadProfile = async () => {
     try {
-      const { data: profile } = await window.point.contract.call({contract: 'PointSocial', method: 'getProfile', params: [address]});
+      const profile = await UserManager.getProfile(address);
       if (profile) {
         setProfile({
           displayName : profile[0],
@@ -355,7 +358,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
         displayNameRef.current.value && 
         (displayNameRef.current.value.trim().length > 0) && 
         displayNameRef.current.value !== name) {
-      const {data: storageId} = await window.point.storage.putString({data: displayNameRef.current.value});
+      const storageId = await point.putString(displayNameRef.current.value);
       newProfile.displayName = storageId;
     }
 
@@ -363,7 +366,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
         displayLocationRef.current.value && 
         (displayLocationRef.current.value.trim().length > 0) && 
         displayLocationRef.current.value !== location) {
-      const {data: storageId} = await window.point.storage.putString({data: displayLocationRef.current.value});
+      const storageId = await point.putString(displayLocationRef.current.value);
       newProfile.displayLocation = storageId;
     }
 
@@ -371,21 +374,21 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
        displayAboutRef.current.value && 
        (displayAboutRef.current.value.trim().length > 0) && 
        displayAboutRef.current.value !== about) {
-      const {data: storageId} = await window.point.storage.putString({data: displayAboutRef.current.value});
+      const storageId = await point.putString(displayAboutRef.current.value);
       newProfile.displayAbout = storageId;
     }
 
     if (uploadAvatarRef.current && uploadAvatarRef.current.files[0]) {
       const formData = new FormData();
       formData.append("postfile", uploadAvatarRef.current.files[0]);
-      const {data: storageId} = await window.point.storage.postFile(formData);
+      const storageId = await point.postFile(formData);
       newProfile.avatar = storageId;
     }
 
     if (uploadBannerRef.current && uploadBannerRef.current.files[0]) {
       const formData = new FormData();
       formData.append("postfile", uploadBannerRef.current.files[0]);
-      const {data: storageId} = await window.point.storage.postFile(formData);
+      const storageId = await point.postFile(formData);
       newProfile.banner = storageId;
     }
 
@@ -401,17 +404,13 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
         followingCount: 0,
       };
 
-      const result = await window.point.contract.send({
-        contract: 'PointSocial', 
-        method: 'setProfile', 
-        params: [
-          updatedProfile.displayName, 
-          updatedProfile.displayLocation, 
-          updatedProfile.displayAbout, 
-          updatedProfile.avatar, 
-          updatedProfile.banner
-        ]
-      });
+      const result = await UserManager.setProfile(
+        updatedProfile.displayName,
+        updatedProfile.displayLocation, 
+        updatedProfile.displayAbout, 
+        updatedProfile.avatar, 
+        updatedProfile.banner
+      );
 
       setProfile(updatedProfile);    
       setUserProfile({

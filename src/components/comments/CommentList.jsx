@@ -24,6 +24,9 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import InfiniteLoader from "react-window-infinite-loader";
 import { TramRounded } from "@material-ui/icons";
 
+import point from "../../services/PointSDK";
+import CommentManager from "../../services/CommentManager";
+
 const useStyles = makeStyles((theme) => ({
     backdrop: {
         position: "absolute",
@@ -79,7 +82,7 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
     const loadComments = async () => {
         try {
             setLoading(true);
-            const {data: comments}  = await window.point.contract.call({contract: 'PointSocial', method: 'getAllCommentsForPost', params: [postId]});
+            const comments = await CommentManager.getComments(postId);
             const filtered = comments.filter(r => (parseInt(r[3]) !== 0)).map(([id, from, contents, createdAt]) => ({id, from, contents, createdAt: createdAt*1000}));
             setComments(filtered);
         }
@@ -96,8 +99,8 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
             try {
                 const contents = inputRef.current.value.trim();
                 setLoading(true);
-                const {data: storageId} = await window.point.storage.putString({data: contents});
-                const result = await window.point.contract.send({contract: 'PointSocial', method: 'addCommentToPost', params: [postId, storageId]});
+                const storageId = await point.putString(contents);
+                const result = await CommentManager.addComment(postId, storageId);
                 console.log(result);
                 setAlert("Your comment was successfully shared!|success");
                 // TODO: Fetch only the latest posts using progressive loading

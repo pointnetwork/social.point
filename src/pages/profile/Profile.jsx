@@ -20,6 +20,8 @@ import Typography from '@material-ui/core/Typography';
 
 import ProfileCard from "../../components/profile/ProfileCard";
 
+import point from "../../services/PointSDK";
+
 const EMPTY = '0x0000000000000000000000000000000000000000';
 
 function Alert(props) {
@@ -59,17 +61,14 @@ const Profile = () => {
     
           if (isAddress) {
             address = params.account;
-            const result = await window.point.identity.ownerToIdentity({owner: address});
-            if (result && result.data && result.data.identity) {
-              identity = result.data.identity;
-            }
+            const result = await point.ownerToIdentity(address);
+            identity = (result && result.identity)? result.identity: null;
           }
           else {
             identity =  params.account;
-            const result = await window.point.identity.identityToOwner({identity: identity});
-            if (result && result.data && result.data.owner && result.data.owner !== EMPTY) {
-              address = result.data.owner;
-            }
+            const result = await point.identityToOwner(identity);
+            console.log(result);
+            address = (result && result.owner && (result.owner !== EMPTY))? result.owner: null;
           }
     
           if (address && identity) {

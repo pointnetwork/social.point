@@ -34,6 +34,10 @@ import {Button,
 
 import Skeleton from '@material-ui/lab/Skeleton';
 
+import point from "../../services/PointSDK";
+import UserManager from "../../services/UserManager";
+import CommentManager from "../../services/CommentManager";
+
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const useStyles = makeStyles((theme) => ({
@@ -105,9 +109,9 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
         }
         else {
             try {
-                const {data: profile} = await window.point.contract.call({contract: 'PointSocial', method: 'getProfile', params: [comment.from]});
-                const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: comment.from});
-                const {data: name} = (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' });
+                const profile = await UserManager.getProfile(comment.from);
+                const {identity} = await point.identityToOwner(comment.from);
+                const name = (profile[0] === EMPTY)? identity : point.getString(profile[0], {encoding: 'utf-8'});
                 setName(name);
             }
             catch(error) {
@@ -118,7 +122,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
         setDate(comment.createdAt);
 
         try {
-            const {data: contents} = (comment.contents === EMPTY)? {data:""} : await window.point.storage.getString({ id: comment.contents, encoding: 'utf-8' });
+            const contents =  (comment.contents === EMPTY)? "" : await point.getString(comment.contents,  {encoding: 'utf-8'});
             setContent(contents);
         }
         catch(error) {
@@ -152,7 +156,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
     const deleteComment =  async () => {
         try {
             setLoading(true);
-            await window.point.contract.send({contract: 'PointSocial', method: 'deleteCommentForPost', params: [postId, comment.id]});
+            await CommentManager.deleteComment(postId, comment.id);
             parentDeleteComment(comment.id);
         }
         catch(error) {
@@ -173,9 +177,10 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
         try {
             const contents = inputRef.current.value.trim();
             setLoading(true);
-                    
-            const {data: storageId} = await window.point.storage.putString({data: contents});
-            const result = await window.point.contract.send({contract: 'PointSocial', method: 'editCommentForPost', params: [comment.id, storageId]});
+            
+            const storageId = await point.putString(contents);
+            const result = await CommentManager.editComment(comment.id, storageId);
+            console.log(result);
 
             setContent(contents);
             setEdit(false);
