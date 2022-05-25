@@ -30,8 +30,6 @@ export const ProvideAppContext = ({ children }) => {
         const { address } = await point.getWalletAddress();
         const { identity } = await point.ownerToIdentity(address);
         const profile = await users.getProfile(address);
-        console.log("Profile value is");
-        console.log(profile);
         const name = (profile[0] === EMPTY)? identity : await point.getString(profile[0], { encoding: 'utf-8'});
         const location = (profile[1] === EMPTY)? "Point Network" : await point.getString(profile[1], {encoding: 'utf-8'});
         const about = (profile[2] === EMPTY)? "Hey I'm using Point Social!" : await point.getString(profile[2], {encoding: 'utf-8'});

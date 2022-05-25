@@ -188,7 +188,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                 setMedia(`/_storage/${post.image}`);
             }
             const isLiked = await PostManager.checkLikeToPost(post.id);
-            
+
             setLike(isLiked);
             setCountersLoading(false);
         }
@@ -306,9 +306,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                 throw new Error("Sorry, but you can't create an empty post");
             }
             
-            console.log({contract: 'PointSocial', method: 'editPost', params: [post.id, contentId, imageId]});
             const result = await PostManager.editPost(post.id, contentId, imageId);
-            console.log(result);
 
             setContent(newContent);
             setMedia(newMedia);

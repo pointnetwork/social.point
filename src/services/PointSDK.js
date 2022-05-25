@@ -19,7 +19,7 @@ class PointSDK {
             point[component][call](args),
             new Promise((rs, rj) => setTimeout(()=>rj(new Error("Point SDK: Request Timeout")), (timeout || POINT_TIMEOUT)))
         ]);
-        return (result.data)? result.data: result;
+        return (result.hasOwnProperty('data'))? result.data: result;
     }
 
     /************** BASIC FUNCTIONS **************/
@@ -53,9 +53,9 @@ class PointSDK {
 
     static getPublicKeyByIdentity = async (identity, args) => PointSDK._callSDKFunction('identity', 'publicKeyByIdentity', {identity, args});
 
-    static identityToOwner = async (identity, args) => PointSDK._callSDKFunction('identity', 'identityToOwner', {identity, args}); // OK
+    static identityToOwner = async (identity) => PointSDK._callSDKFunction('identity', 'identityToOwner', {identity}); // OK
 
-    static ownerToIdentity = async (owner, args) => PointSDK._callSDKFunction('identity', 'ownerToIdentity', {owner, args});
+    static ownerToIdentity = async (owner) => PointSDK._callSDKFunction('identity', 'ownerToIdentity', {owner});
 
     /************** STORAGE FUNCTIONS **************/
 
