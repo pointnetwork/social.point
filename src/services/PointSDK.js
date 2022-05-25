@@ -15,11 +15,11 @@ class PointSDK {
 
     static async _callSDKFunction(component, call, args = {}, timeout) {
         const point = PointSDK._getPoint();
-        const {data} = await Promise.race([
+        const result = await Promise.race([
             point[component][call](args),
             new Promise((rs, rj) => setTimeout(()=>rj(new Error("Point SDK: Request Timeout")), (timeout || POINT_TIMEOUT)))
         ]);
-        return data;
+        return (result.data)? result.data: result;
     }
 
     /************** BASIC FUNCTIONS **************/
