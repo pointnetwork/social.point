@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAppContext } from '../../context/AppContext';
 import { makeStyles } from '@material-ui/core/styles';
 
+import PostManager from '../../services/PostManager';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Backdrop from '@material-ui/core/Backdrop';
@@ -60,7 +61,8 @@ const Post = () => {
         try {
           const isPost = params.id.match(/^\d+$/);
           if (isPost) {
-            const {data: post}  = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [params.id]});
+            const post = await PostManager.getPost(params.id);
+            
             if (post && (parseInt(post[4]) !== 0)) {
                 setPost({
                     id: post[0],

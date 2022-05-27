@@ -6,6 +6,9 @@ import { Avatar } from '@material-ui/core';
 import { Skeleton } from '@material-ui/lab';
 import { Link } from "wouter";
 
+import point from "../../services/PointSDK";
+import UserManager from '../../services/UserManager';
+
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const useStyles = makeStyles((theme) => ({
@@ -42,9 +45,9 @@ const UserAvatar = ({user, address, upperLoading, setAlert, src, link = true, pr
             else {
                 try {
                     setLoading(true);
-                    const {data: profile} = await window.point.contract.call({contract: 'PointSocial', method: 'getProfile', params: [address]});
-                    const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: address});
-                    const {data: name} = (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' });
+                    const profile = await UserManager.getProfile(address);
+                    const { identity } = await point.ownerToIdentity(address);
+                    const name = (profile[0] === EMPTY)? identity : await point.getString(profile[0], {  encoding: 'utf-8' });
                     setName(name);
                     setAvatar(`/_storage/${profile[3] || EMPTY }`);
                     setColor(`#${address.slice(-6)}`);

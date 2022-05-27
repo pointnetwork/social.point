@@ -54,6 +54,10 @@ import CommentList from '../comments/CommentList';
 import CardMediaSelector from '../generic/CardMediaSelector';
 import CardMediaContainer from '../generic/CardMediaContainer';
 
+import point from "../../services/PointSDK";
+import UserManager from '../../services/UserManager';
+import PostManager from '../../services/PostManager';
+
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const useStyles = makeStyles((theme) => ({
@@ -166,9 +170,9 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
         }
         else {
             try {
-                const {data: profile} = await window.point.contract.call({contract: 'PointSocial', method: 'getProfile', params: [post.from]});
-                const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: post.from});
-                const {data: name} = (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' });
+                const profile = await UserManager.getProfile(post.from);
+                const { identity } = await point.ownerToIdentity(post.from);
+                const name = (profile[0] === EMPTY)? identity : await point.getString(profile[0], {  encoding: 'utf-8' });
                 setName(name);
             }
             catch(error) {
@@ -177,14 +181,14 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
         }
 
         try {
-            const {data: contents} = (post.contents === EMPTY)? {data:EMPTY} : await window.point.storage.getString({ id: post.contents, encoding: 'utf-8' });
+            const contents = (post.contents === EMPTY)? EMPTY :  await point.getString(post.contents, {  encoding: 'utf-8' })
             setContent(contents);
 
             if (post.image !== EMPTY)  {
                 setMedia(`/_storage/${post.image}`);
             }
+            const isLiked = await PostManager.checkLikeToPost(post.id);
 
-            const {data: isLiked} = await window.point.contract.call({contract: 'PointSocial', method: 'checkLikeToPost', params: [post.id]});
             setLike(isLiked);
             setCountersLoading(false);
         }
@@ -241,7 +245,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     const deletePost = async () => {
         try {
             setLoading(true);
-            await window.point.contract.send({contract: 'PointSocial', method: 'deletePost', params: [post.id]});
+            await PostManager.deletePost(post.id);
             if (parentDeletePost) {
                 parentDeletePost(post.id);
             }
@@ -280,7 +284,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                 contentId = post.contents;
             }
             else {
-                const {data: storageId} = (newContent === EMPTY)? newContent: await window.point.storage.putString({data: newContent});
+                const storageId = (newContent === EMPTY)? newContent : await point.putString(newContent, {  encoding: 'utf-8' });
                 contentId = storageId;
             }
 
@@ -294,7 +298,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
             else {
                 const formData = new FormData()
                 formData.append("postfile", DataURIToBlob(newMedia));
-                const {data: storageId} = await window.point.storage.postFile(formData);
+                const storageId = await point.postFile(formData);
                 imageId = storageId;
             }
 
@@ -302,9 +306,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                 throw new Error("Sorry, but you can't create an empty post");
             }
             
-            console.log({contract: 'PointSocial', method: 'editPost', params: [post.id, contentId, imageId]});
-            const result = await window.point.contract.send({contract: 'PointSocial', method: 'editPost', params: [post.id, contentId, imageId]});
-            console.log(result);
+            const result = await PostManager.editPost(post.id, contentId, imageId);
 
             setContent(newContent);
             setMedia(newMedia);
@@ -321,12 +323,15 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     const toggleLike = async () => {
         try {
             setLikeLoading(true);
-            await window.point.contract.send({contract: 'PointSocial', method: 'addLikeToPost', params: [post.id]});
-            const {data: isLiked} = await window.point.contract.call({contract: 'PointSocial', method: 'checkLikeToPost', params: [post.id]});
+
+            await PostManager.addLikeToPost(post.id);
+
+            const isLiked = await PostManager.checkLikeToPost(post.id);
             setLike(isLiked);
 
             //TODO: Change to events
-            const {data} = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [post.id]});
+            const data = await PostManager.getPost(post.id);
+
             setLikes(parseInt(data[5]));
         }
         catch(error) {
@@ -338,7 +343,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     }
 
     const reloadCount = async () => {
-        const {data} = await window.point.contract.call({contract: 'PointSocial', method: 'getPostById', params: [post.id]});
+        const data = await PostManager.getPost(post.id);
         setLikes(parseInt(data[5]));
         setComments(parseInt(data[6]));
     }

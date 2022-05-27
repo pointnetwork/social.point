@@ -13,6 +13,8 @@ import CircularProgressWithIcon from '../generic/CircularProgressWithIcon';
 import InboxOutlinedIcon from '@material-ui/icons/InboxOutlined';
 import PostCard from "../post/PostCard";
 
+import PostManager from '../../services/PostManager';
+
 const NUM_POSTS_PER_CALL = 10;
 
 const useStyles = makeStyles((theme) => ({
@@ -88,9 +90,10 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   const getPostsLength = async() => {
     try {
       setLoading(true);
-      const { data } = account? 
-      await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsByOwnerLength', params: [account]}) :
-      await window.point.contract.call({contract: 'PointSocial', method: 'getAllPostsLength', params:[]});
+      const data = await (account? 
+        PostManager.getAllPostsByOwnerLength(account) : 
+        PostManager.getAllPostsLength());
+
       setLength(Number(data));
     }
     catch(error) {
@@ -104,17 +107,9 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
     try {
       setLoading(true);
   
-      const { data } = account
-      ? 
-        await window.point.contract.call(
-          {contract: 'PointSocial',
-           method: 'getPaginatedPostsByOwner', 
-           params: [account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL]}) 
-      :
-        await window.point.contract.call(
-          {contract: 'PointSocial', 
-           method: 'getPaginatedPosts', 
-           params:[onlyNew?0:posts.length,NUM_POSTS_PER_CALL]})
+      const data = await (account? 
+        PostManager.getPaginatedPostsByOwner(account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL) : 
+        PostManager.getPaginatedPosts(onlyNew?0:posts.length,NUM_POSTS_PER_CALL));
 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
         .map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (

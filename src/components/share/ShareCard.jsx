@@ -20,6 +20,9 @@ import SendOutlinedIcon from '@material-ui/icons/SendOutlined';
 import AddPhotoAlternateOutlinedIcon from '@material-ui/icons/AddPhotoAlternateOutlined';
 import CloudUploadOutlinedIcon from '@material-ui/icons/CloudUploadOutlined';
 
+import PostManager from '../../services/PostManager';
+import point from "../../services/PointSDK";
+
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 const useStyles = makeStyles((theme) => ({
@@ -91,7 +94,7 @@ function DataURIToBlob(dataURI) {
 async function saveFile(file) {
     const formData = new FormData();
     formData.append("postfile", DataURIToBlob(file));
-    const {data: storageId} = await window.point.storage.postFile(formData);
+    const storageId = await point.postFile(formData);
     return storageId;
 }
 
@@ -125,11 +128,9 @@ const ShareCard = ({ setAlert, setReload }) => {
             }
 
             setLoading(true);
-
-            const {data: storageId} = (content)? await window.point.storage.putString({data: content}): EMPTY;
+            const storageId = (content)? await point.putString(content): EMPTY;
             const imageId = (media)? await saveFile(media): EMPTY;
-            console.log({contract: 'PointSocial', method: 'addPost', params: [ (storageId || EMPTY), (imageId || EMPTY)]});
-            await window.point.contract.send({contract: 'PointSocial', method: 'addPost', params: [ (storageId || EMPTY), (imageId || EMPTY)]});
+            await PostManager.addPost(storageId, imageId);
 
             setAlert("Your post was successfully shared!|success");
             reset();

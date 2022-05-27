@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useLocation } from "wouter";
+import point from "../services/PointSDK";
+import users from '../services/UserManager';
 
 const defaultContext = {
   walletAddress: undefined,
@@ -25,13 +27,12 @@ export const ProvideAppContext = ({ children }) => {
   useEffect(() => {
     (async () => {
       try {
-        const {data: {address}} = await window.point.wallet.address();
-        const {data: {identity}} = await window.point.identity.ownerToIdentity({owner: address});
-        const {data: profile} = await window.point.contract.call({contract: 'PointSocial', method: 'getProfile', params: [address]});
-        setIdentity(identity);
-        const {data: name} = (profile[0] === EMPTY)? {data:identity} : await window.point.storage.getString({ id: profile[0], encoding: 'utf-8' });
-        const {data: location} = (profile[1] === EMPTY)? {data:"Point Network"} : await window.point.storage.getString({ id: profile[1], encoding: 'utf-8' });
-        const {data: about} = (profile[2] === EMPTY)? {data:"Hey I'm using Point Social!"} : await window.point.storage.getString({ id: profile[2], encoding: 'utf-8' });
+        const { address } = await point.getWalletAddress();
+        const { identity } = await point.ownerToIdentity(address);
+        const profile = await users.getProfile(address);
+        const name = (profile[0] === EMPTY)? identity : await point.getString(profile[0], { encoding: 'utf-8'});
+        const location = (profile[1] === EMPTY)? "Point Network" : await point.getString(profile[1], {encoding: 'utf-8'});
+        const about = (profile[2] === EMPTY)? "Hey I'm using Point Social!" : await point.getString(profile[2], {encoding: 'utf-8'});
         setUserProfile({
           displayName : name,
           displayLocation : location, 
@@ -41,9 +42,11 @@ export const ProvideAppContext = ({ children }) => {
           followersCount: 0,
           followingCount: 0,
         });
+        setIdentity(identity);
         setWalletAddress(address);
-      } catch (e) {
-        setWallerError(e);
+      } catch (error) {
+        console.log(error);
+        setWallerError(error);
       }
     })()
   }, [])
