@@ -1,5 +1,6 @@
 import './comments.css'
 import { useState } from "react";
+import CommentManager from "../../services/CommentManager"
 
 const CommentEditor = ({ commentId, content, toggleEditComment, reloadComments }) => {
     const DEFAULT_BTN_LABEL = 'Comment'
@@ -39,7 +40,7 @@ const CommentEditor = ({ commentId, content, toggleEditComment, reloadComments }
             // Save the post content to the storage layer and keep the storage id
             let {data: storageId} = await window.point.storage.putString({data: contents});
             // Save the post contents storage id in the PoinSocial Smart Contract
-            await window.point.contract.send({contract: 'PointSocial', method: 'editCommentForPost', params: [commentId, storageId]});
+            await CommentManager.editComment(commentId, storageId);
             setSaving(false);
             // calling renderCommentsImmediate instead of fetching the comments due to issues with fetching content too soon from Arweave after posting.
             // PD: using a timeout of 1000 apparently works

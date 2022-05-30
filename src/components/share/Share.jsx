@@ -6,6 +6,7 @@ import { useAppContext } from '../../context/AppContext';
 
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert from '@material-ui/lab/Alert';
+import PostManager from "../../services/PostManager"
 
 function Alert(props) {
   return <MuiAlert elevation={6} variant="filled" {...props} />;
@@ -71,7 +72,7 @@ export default function Share({reloadPosts}) {
         imageId = res.data;
       }
       // Save the post contents storage id in the PoinSocial Smart Contract
-      await window.point.contract.send({contract: 'PointSocial', method: 'addPost', params: [storageId, imageId]});
+      await PostManager.addPost(storageId, imageId)
       await reloadPosts();
       setSaving(false);
       setContents('');

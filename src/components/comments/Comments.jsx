@@ -5,6 +5,7 @@ import Comment from './Comment'
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Box from '@material-ui/core/Box';
 import { makeStyles } from '@material-ui/core/styles';
+import CommentManager from "../../services/CommentManager"
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -81,7 +82,7 @@ const Comments = ({ postId, commentsCount, setCommentsCount, reloadPostCounters 
           // Save the post content to the storage layer and keep the storage id
           let {data: storageId} = await window.point.storage.putString({data: contents});
           // Save the post contents storage id in the PoinSocial Smart Contract
-          await window.point.contract.send({contract: 'PointSocial', method: 'addCommentToPost', params: [postId, storageId]});
+          await CommentManager.addComment(postId, storageId)
           setSaving(false);
           // calling renderCommentsImmediate instead of fetching the comments due to issues with fetching content too soon from Arweave after posting.
           //renderCommentsImmediate(contents);
