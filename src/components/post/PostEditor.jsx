@@ -1,6 +1,7 @@
 import "./postEditor.css";
 import { AttachFileTwoTone } from "@material-ui/icons";
 import { useRef, useState } from "react";
+import PostManager from "../../services/PostManager"
 
 export default function PostEditor({ post, toggleEditPost, reloadPost }) {
   const DEFAULT_BTN_LABEL = 'Save'
@@ -93,9 +94,7 @@ export default function PostEditor({ post, toggleEditPost, reloadPost }) {
         imageId = res.data;
       }
       // Save the post contents storage id in the PoinSocial Smart Contract
-      console.log({contract: 'PointSocial', method: 'editPost', params: [post.id, storageId, imageId]});
-      const result = await window.point.contract.send({contract: 'PointSocial', method: 'editPost', params: [post.id, storageId, imageId]});
-      console.log(result);
+      await PostManager.editPost(post.id, storageId, imageId);
       setSaving(false);
       setContents('');
       setSelectedFile();
