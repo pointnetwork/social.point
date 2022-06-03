@@ -15,7 +15,7 @@ import PostCard from "../post/PostCard";
 
 import PostManager from '../../services/PostManager';
 
-const NUM_POSTS_PER_CALL = 10;
+const NUM_POSTS_PER_CALL = 5;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -113,7 +113,15 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
         .map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
-          {id, from, contents, image, createdAt: createdAt*1000, likesCount:parseInt(likesCount), commentsCount:parseInt(commentsCount)}
+          {
+            id, 
+            from, 
+            contents, 
+            image, 
+            createdAt: createdAt*1000, 
+            likesCount:parseInt(likesCount), 
+            commentsCount:parseInt(commentsCount)
+          }
         )
       );
 
@@ -160,23 +168,31 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   return (
     <div className={styles.root}>
         <Box className={styles.container}>
-          { !loading &&
-              <> {
-                  (length === 0)
-                  ?
-                    <Box color="text.disabled" display="flex" justifyContent="center" alignItems="center" height="100%" >
-                        <div className={styles.empty}>
-                            <InboxOutlinedIcon style={{ fontSize: 32 }} />
-                            <Typography variant="caption">{`No posts yet.${ canPost? " Be the first!" : "" }`}</Typography>
-                        </div>
-                    </Box>
-                  :
-                    posts.filter(post => post.createdAt > 0).map((post) => (
-                        <div key={post.id} className={styles.separator}>
-                          <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} canExpand={false} parentDeletePost={deletePost}/>
-                        </div>
-                    ))
-              } </>
+          { 
+            (length === 0)?
+              <Box color="text.disabled" 
+                    display="flex" 
+                    justifyContent="center" 
+                    alignItems="center" 
+                    height="100%">
+                  <div className={styles.empty}>
+                      <InboxOutlinedIcon style={{ fontSize: 32 }} />
+                      <Typography 
+                        variant="caption">{`No posts yet.${ canPost? " Be the first!" : "" }`}
+                      </Typography>
+                  </div>
+              </Box>
+              :
+              posts.filter(post => post.createdAt > 0).map((post) => (
+                  <div key={post.id} className={styles.separator}>
+                    <PostCard 
+                      post={post} 
+                      setUpperLoading={setLoading} 
+                      setAlert={setAlert} 
+                      canExpand={false} 
+                      parentDeletePost={deletePost}/>
+                  </div>
+              ))
           }
           <div ref={observe} className={styles.observer}>
           {
