@@ -1,6 +1,8 @@
 
-const POINT_TIMEOUT = 300000;
-const MAX_TIMEOUT = 600000;
+const POINT_TIMEOUT = 30 * 1000;
+const MAX_TIMEOUT = 600 * 1000;
+const DEBUG = false;
+const DISPLAY_ERRORS = true;
 
 class PointSDK {
 
@@ -14,12 +16,21 @@ class PointSDK {
     }
 
     static async _callSDKFunction(component, call, args = {}, timeout) {
-        const point = PointSDK._getPoint();
-        const result = await Promise.race([
-            point[component][call](args),
-            new Promise((rs, rj) => setTimeout(()=>rj(new Error("Point SDK: Request Timeout")), (timeout || POINT_TIMEOUT)))
-        ]);
-        return (result.hasOwnProperty('data'))? result.data: result;
+        const callId = Date.now();
+        try {
+            const point = PointSDK._getPoint();
+            if (DEBUG) console.info(`Execution: ${callId}`);
+            const result = await Promise.race([
+                point[component][call](args),
+                new Promise((rs, rj) => setTimeout(()=>rj(new Error("PointSDK: Request Timeout")), (timeout || POINT_TIMEOUT)))
+            ]);
+            if (DEBUG) console.info(`${callId}: Call: ${component} ${call} ${JSON.stringify(args)} | Result ${JSON.stringify(result)}`);
+            return (result.hasOwnProperty('data'))? result.data: result;
+        }
+        catch(error) {
+            if (DEBUG || DISPLAY_ERRORS) console.error(`PointSDK call failed: ${error.message} ${callId}: Call: ${component} ${call} ${JSON.stringify(args)}`);
+            throw error;
+        }
     }
 
     /************** BASIC FUNCTIONS **************/
