@@ -7,6 +7,7 @@ import AddPhotoAlternateOutlinedIcon from '@material-ui/icons/AddPhotoAlternateO
 import RemoveCircleOutlineOutlinedIcon from '@material-ui/icons/RemoveCircleOutlineOutlined';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
+const MEDIA_TYPES = "image/gif,image/png,image/jpeg,image/bmp,image/webp,video/webm,video/ogg,video/mp4,video/mpeg";
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -57,7 +58,7 @@ const CardMediaSelector = forwardRef(({ selectedMedia, setAlert, loading=false }
 
     const styles = useStyles();
     const [media, setMedia] = useState(selectedMedia);
-    const [mediaType, setMediaType] = useState('image');
+    const [mediaType, setMediaType] = useState();
 
     const mediaRef = useRef(null);
 
@@ -73,7 +74,14 @@ const CardMediaSelector = forwardRef(({ selectedMedia, setAlert, loading=false }
               fileReader.readAsDataURL(target.files[0]);
               fileReader.onload = (e) => {
                 const data = e.srcElement.result;
-                setMediaType(data.substring(data.indexOf(':')+1,data.indexOf('/')));
+
+                const contentType = data.substring(data.indexOf(':')+1,data.indexOf(';'));
+                if (!MEDIA_TYPES.split(",").includes(contentType)) {
+                    setAlert("The selected file format is unsupported, please select another file");
+                    return;
+                }
+
+                setMediaType(data.substring(data.indexOf(':')+1,data.indexOf('/'))); 
                 setMedia(data);
               };  
             }
@@ -98,19 +106,21 @@ const CardMediaSelector = forwardRef(({ selectedMedia, setAlert, loading=false }
     }
 
     const onMediaError = (e) => {
-        if (mediaType === 'video') {
-            setMediaType('image');
-        }
-        else if (mediaType === 'image') {
-            setMediaType('video');            
-        }
+        console.error(e);
+        setAlert("The selected file could not be processed, please select another file");
+        setMedia(undefined);
+        setMediaType(undefined);
     }
 
     return (
         <Box className={styles.root}>
             <div className={styles.frame}>
-                {(mediaType === 'image') && <img className={styles.image} src={media} onError={onMediaError} alt=""/>}
-                {(mediaType === 'video') && <video className={styles.video} controls><source src={media} onError={onMediaError}></source></video>}
+                {(mediaType === 'image') && 
+                <img className={styles.image} src={media} onError={onMediaError} alt=""/>}
+                {(mediaType === 'video') && 
+                <video className={styles.video} controls>
+                    <source src={media} onError={onMediaError}></source>
+                </video>}
                 {
                     !loading &&
                     <>
@@ -123,7 +133,7 @@ const CardMediaSelector = forwardRef(({ selectedMedia, setAlert, loading=false }
                     </>    
                 }
             </div>
-            <input ref={mediaRef} accept="image/*,video/*" type="file" hidden onChange={handleFileUpload} />
+            <input ref={mediaRef} accept={MEDIA_TYPES} type="file" hidden onChange={handleFileUpload} />
         </Box>
     );
 });
