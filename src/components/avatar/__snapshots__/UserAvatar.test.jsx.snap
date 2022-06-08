@@ -1,0 +1,22 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`UserAvatar should render 1`] = `
+<div
+  aria-label="avatar"
+  className="MuiAvatar-root MuiAvatar-circular makeStyles-root-1"
+  href="/profile/0x12345679ABCDEF"
+  onClick={[Function]}
+  style={
+    Object {
+      "backgroundColor": "#ABCDEF",
+    }
+  }
+  to={null}
+>
+  <img
+    alt=""
+    className="MuiAvatar-img"
+    src="0x0000000000000000000000000000000000000000000000000000000000000000"
+  />
+</div>
+`;

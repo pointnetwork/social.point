@@ -1,0 +1,106 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`RichTextField should render 1`] = `
+<div
+  className="MuiFormControl-root MuiTextField-root makeStyles-root-1 MuiFormControl-fullWidth"
+>
+  <div
+    className="MuiInputBase-root MuiOutlinedInput-root MuiInputBase-fullWidth MuiInputBase-formControl MuiInputBase-multiline MuiOutlinedInput-multiline MuiInputBase-adornedStart MuiOutlinedInput-adornedStart MuiInputBase-marginDense MuiOutlinedInput-marginDense"
+    onClick={[Function]}
+  >
+    <div
+      className="MuiInputAdornment-root makeStyles-button-3 MuiInputAdornment-positionStart MuiInputAdornment-marginDense"
+      onClick={[Function]}
+    >
+      <svg
+        aria-hidden={true}
+        className="MuiSvgIcon-root makeStyles-icon-2"
+        focusable="false"
+        size="small"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          cx="15.5"
+          cy="9.5"
+          r="1.5"
+        />
+        <circle
+          cx="8.5"
+          cy="9.5"
+          r="1.5"
+        />
+        <path
+          d="M12 18c2.28 0 4.22-1.66 5-4H7c.78 2.34 2.72 4 5 4z"
+        />
+        <path
+          d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"
+        />
+      </svg>
+    </div>
+    <textarea
+      aria-invalid={false}
+      autoFocus={true}
+      className="MuiInputBase-input MuiOutlinedInput-input MuiInputBase-inputMultiline MuiOutlinedInput-inputMultiline MuiInputBase-inputAdornedStart MuiOutlinedInput-inputAdornedStart MuiInputBase-inputMarginDense MuiOutlinedInput-inputMarginDense"
+      disabled={false}
+      maxLength={512}
+      minLength={2}
+      onAnimationStart={[Function]}
+      onBlur={[Function]}
+      onChange={[Function]}
+      onFocus={[Function]}
+      placeholder=""
+      required={false}
+      rows={1}
+      style={
+        Object {
+          "height": -2,
+          "overflow": "hidden",
+        }
+      }
+    />
+    <textarea
+      aria-hidden={true}
+      className="MuiInputBase-input MuiOutlinedInput-input MuiInputBase-inputMultiline MuiOutlinedInput-inputMultiline MuiInputBase-inputAdornedStart MuiOutlinedInput-inputAdornedStart MuiInputBase-inputMarginDense MuiOutlinedInput-inputMarginDense"
+      readOnly={true}
+      style={
+        Object {
+          "height": 0,
+          "left": 0,
+          "overflow": "hidden",
+          "position": "absolute",
+          "top": 0,
+          "transform": "translateZ(0)",
+          "visibility": "hidden",
+        }
+      }
+      tabIndex={-1}
+    />
+    <fieldset
+      aria-hidden={true}
+      className="PrivateNotchedOutline-root-4 MuiOutlinedInput-notchedOutline"
+      style={
+        Object {
+          "paddingLeft": 8,
+        }
+      }
+    >
+      <legend
+        className="PrivateNotchedOutline-legend-5"
+        style={
+          Object {
+            "width": 0.01,
+          }
+        }
+      >
+        <span
+          dangerouslySetInnerHTML={
+            Object {
+              "__html": "&#8203;",
+            }
+          }
+        />
+      </legend>
+    </fieldset>
+  </div>
+</div>
+`;

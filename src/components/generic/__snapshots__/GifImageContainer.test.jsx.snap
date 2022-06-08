@@ -1,0 +1,17 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`GifImageContainer should render 1`] = `
+<div
+  className="MuiBox-root MuiBox-root-4 makeStyles-root-1"
+>
+  <div
+    className="makeStyles-frame-2"
+  >
+    <img
+      alt=""
+      className="makeStyles-image-3"
+      src="test-file-stub"
+    />
+  </div>
+</div>
+`;
