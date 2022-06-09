@@ -1,29 +1,26 @@
-
-import { expect } from "chai";
-import { ethers } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { PointSocial__factory } from "../../typechain"
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
 describe("PointSocial contract", function () {
 
-    let pointSocial: any;
-	let owner: SignerWithAddress;
-	let addr1: SignerWithAddress;
-	let addr2: SignerWithAddress
-	let addrs: SignerWithAddress[];
-	let handle: string;
+    let pointSocial;
+	let owner;
+	let addr1;
+	let addr2;
+	let addrs;
+	let handle;
     let postContent = "0x9d6b0f937680809a01639ad1ae4770241c7c8a0ded490d2f023669f18c6d744b";
     let postimage = '0x5f04837d78fa7a656419f98d73fc1ddaac1bfdfca9a244a2ee128737a186da6e';
 
     beforeEach(async function () {
 		[owner, addr1, addr2, ...addrs] = await ethers.getSigners();
-        const factory = await ethers.getContractFactory("PointSocial") as PointSocial__factory;
+        const factory = await ethers.getContractFactory("PointSocial");
         pointSocial = await factory.deploy()
         pointSocial.initialize();
     });
 
 
-	describe("Testing migrator functions", function () {
+	/*describe("Testing migrator functions", function () {
         it("User can add migrator", async function () {
             await pointSocial.addMigrator(
                 addr1.address
@@ -31,7 +28,7 @@ describe("PointSocial contract", function () {
 
             await expect(
                 pointSocial.addMigrator(addr2.address)
-              ).to.be.revertedWith("Access Denied");
+            ).to.be.revertedWith("Access Denied");
         });
 
         it("User can add migrator migrator can add post", async function () {
@@ -126,7 +123,7 @@ describe("PointSocial contract", function () {
                 pointSocial.connect(addr2).addMigrator(addr2.address)
               ).to.be.revertedWith("Ownable: caller is not the owner");
         });
-    });
+    });*/
 
 	describe("Testing user functions", function () {
        it("User can create post", async function () {
