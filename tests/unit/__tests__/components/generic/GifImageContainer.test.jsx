@@ -1,13 +1,15 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import DialogTitle from './DialogTitle';
+import GifImageContainer from '../../../../../src/components/generic/GifImageContainer';
 
-describe("DialogTitle", () => {
+import image from "../../assets/header-pic.jpg"
+
+describe("GifImageContainer", () => {
 
     it('should render', () => {
         const component = renderer.create(
-            <DialogTitle classes={{}} children={<div></div>} onClose={jest.fn()} other={{}}></DialogTitle>
+            <GifImageContainer src={image}/>
         )
         expect(component.toJSON()).toMatchSnapshot();
     });

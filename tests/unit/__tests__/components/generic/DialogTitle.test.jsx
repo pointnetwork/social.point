@@ -1,15 +1,13 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import CardMediaContainer from './CardMediaContainer';
+import DialogTitle from '../../../../../src/components/generic/DialogTitle';
 
-import image from "../../assets/header-pic.jpg"
-
-describe("CardMediaContainer", () => {
+describe("DialogTitle", () => {
 
     it('should render', () => {
         const component = renderer.create(
-            <CardMediaContainer media={image}></CardMediaContainer>
+            <DialogTitle classes={{}} children={<div></div>} onClose={jest.fn()} other={{}}></DialogTitle>
         )
         expect(component.toJSON()).toMatchSnapshot();
     });

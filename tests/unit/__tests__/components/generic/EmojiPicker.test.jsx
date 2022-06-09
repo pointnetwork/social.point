@@ -1,7 +1,7 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import EmojiPicker from './EmojiPicker';
+import EmojiPicker from '../../../../../src/components/generic/EmojiPicker';
 
 describe("EmojiPicker", () => {
 

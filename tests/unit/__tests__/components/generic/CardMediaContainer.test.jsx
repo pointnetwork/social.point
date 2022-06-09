@@ -1,15 +1,15 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import GifImageContainer from './GifImageContainer';
+import CardMediaContainer from '../../../../../src/components/generic/CardMediaContainer';
 
 import image from "../../assets/header-pic.jpg"
 
-describe("GifImageContainer", () => {
+describe("CardMediaContainer", () => {
 
     it('should render', () => {
         const component = renderer.create(
-            <GifImageContainer src={image}/>
+            <CardMediaContainer media={image}></CardMediaContainer>
         )
         expect(component.toJSON()).toMatchSnapshot();
     });

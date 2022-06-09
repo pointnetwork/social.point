@@ -1,7 +1,7 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import CircularProgressWithIcon from './CircularProgressWithIcon';
+import CircularProgressWithIcon from '../../../../../src/components/generic/CircularProgressWithIcon';
 
 import AddPhotoAlternateOutlinedIcon from '@material-ui/icons/AddPhotoAlternateOutlined';
 

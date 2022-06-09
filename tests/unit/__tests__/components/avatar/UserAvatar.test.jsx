@@ -1,7 +1,7 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import UserAvatar from './UserAvatar';
+import UserAvatar from '../../../../../src/components/avatar/UserAvatar';
 
 describe("UserAvatar", () => {
 

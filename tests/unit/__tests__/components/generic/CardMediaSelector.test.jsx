@@ -1,7 +1,7 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import CardMediaSelector from './CardMediaSelector';
+import CardMediaSelector from '../../../../../src/components/generic/CardMediaSelector';
 
 import image from "../../assets/header-pic.jpg"
 

@@ -1,7 +1,7 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import CollapsibleTypography from './CollapsibleTypography';
+import CollapsibleTypography from '../../../../../src/components/generic/CollapsibleTypography';
 
 describe("CollapsibleTypography", () => {
 

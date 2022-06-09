@@ -1,7 +1,7 @@
 import React from "react";
 import renderer from 'react-test-renderer';
 
-import RichTextField from './RichTextField';
+import RichTextField from '../../../../../src/components/generic/RichTextField';
 
 
 function createNodeMock(element) {
