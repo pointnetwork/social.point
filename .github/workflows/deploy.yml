@@ -8,92 +8,36 @@ on:
 
 jobs:
 
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [14.x, 16.x]
+        node-version: [14.x]
 
     steps:
 
-    - name: Create base dir for staging files
-      run: mkdir -p deploy/zapps deploy/pointnetwork
+      - name: Installing node version ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
 
-    - name: Create symbolic link to zapps
-      run: ln -s $(pwd) deploy/zapps/social.point
+      - name: Checkout the code for social point...
+        uses: actions/checkout@v3
+        path: './deploy/zapps/social.point'
 
-    - name: Installing node version ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+      - name: Installing dependencies for social point...
+        run: npm ci --legacy-peer-deps
 
-    - name: Upgrade NPM
-      run: npm install -g npm
+      - name: Building social point...
+        run: npm run build
 
-    - name: Checkout the code for social point...
-      uses: actions/checkout@v3
-      path: './deploy/zapps/social.point'
-
-    - name: Installing dependencies for social point...
-      run: npm ci --legacy-peer-deps
-
-    - name: Building social point...
-      run: npm run build
-
-    - name: Checkout the code for point network...
-      uses: actions/checkout@v3
-      with:
-          repository: 'pointnetwork/pointnetwork'
-          ref: 'v0.1.70'
-          path: './deploy/pointnetwork'
-
-    - name: DEBUG --- Check the dir 
-      working-directory: deploy/pointnetwork
-      run: ls -l
-
-    - name: Installing dependencies for point network...
-      working-directory: deploy/pointnetwork
-      run: npm ci
-
-    - name: DEBUG --- Check the dir 
-      working-directory: deploy/pointnetwork
-      run: pwd
-
-    - name: DEBUG --- Check the dir 
-      working-directory: deploy/pointnetwork
-      run: ls -l
-
-    - name: Building point network...
-      working-directory: deploy/pointnetwork
-      run: npm run build
-
-    - name: TEST --- Installing local environment...
-      working-directory: deploy/pointnetwork
-      run: ./scripts/create-local-env.sh
-
-    - name: TEST --- Wait for services
-      uses: jakejarvis/wait-action@v0.1.1
-      with:
-        time: '20s'      
-
-    - name: TEST --- Running local environment...
-      working-directory: deploy/pointnetwork
-      run: ./scripts/start-local.sh    
-
-    #- name: Running point network...
-    #  run: npm run start &
-
-    - name: Wait for node
-      uses: jakejarvis/wait-action@v0.1.1
-      with:
-        time: '30s'
-
-    - name: Deploy point network
-      working-directory: deploy/pointnetwork
-      run: './point deploy ../zapps/social.point --contracts --dev'
-      env:
-        NODE_CONFIG_ENV: devlocal 
-        MODE: zappdev 
-
+      - name: Deploy app to point network      
+        uses: docker://pointnetwork/pointnetwork_node:v0.1.70
+        with:
+          entrypoint: /bin/sh ${{ github.workspace }}/scripts/entrypoint.sh
+        env:
+          DEPLOYER: ${{ secrets.deployer }}
+          DEPLOY_CONTRACTS: true
+          DEPLOY_DEV: true
