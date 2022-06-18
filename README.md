@@ -26,3 +26,11 @@ npm run watch
 ```
 
 Now when you save changes to any of the projects components the project will be automatically built and you can refresh the Point Browser to review the updated changes immediately.
+
+## Run tests
+
+To run the tests:
+
+```
+npm test
+```

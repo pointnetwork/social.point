@@ -1,0 +1,58 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`CardMediaSelector should render 1`] = `
+<div
+  className="MuiBox-root MuiBox-root-7 makeStyles-root-1"
+>
+  <div
+    className="makeStyles-frame-2"
+  >
+    <button
+      aria-label="remove"
+      className="MuiButtonBase-root MuiFab-root makeStyles-fab-6"
+      disabled={false}
+      onBlur={[Function]}
+      onClick={[Function]}
+      onDragLeave={[Function]}
+      onFocus={[Function]}
+      onKeyDown={[Function]}
+      onKeyUp={[Function]}
+      onMouseDown={[Function]}
+      onMouseLeave={[Function]}
+      onMouseUp={[Function]}
+      onTouchEnd={[Function]}
+      onTouchMove={[Function]}
+      onTouchStart={[Function]}
+      tabIndex={0}
+      type="button"
+    >
+      <span
+        className="MuiFab-label"
+      >
+        <svg
+          aria-hidden={true}
+          className="MuiSvgIcon-root MuiSvgIcon-fontSizeLarge"
+          focusable="false"
+          style={
+            Object {
+              "color": "#fff",
+              "fontColor": "#fff",
+            }
+          }
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
+          />
+        </svg>
+      </span>
+    </button>
+  </div>
+  <input
+    accept="image/gif,image/png,image/jpeg,image/bmp,image/webp,video/webm,video/ogg,video/mp4,video/mpeg"
+    hidden={true}
+    onChange={[Function]}
+    type="file"
+  />
+</div>
+`;

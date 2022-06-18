@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`CollapsibleTypography should render 1`] = `
+<span
+  className="MuiTypography-root makeStyles-inline-2 MuiTypography-body2 MuiTypography-colorTextPrimary MuiTypography-noWrap MuiTypography-alignLeft"
+  onClick={[Function]}
+>
+  this is a test
+</span>
+`;
