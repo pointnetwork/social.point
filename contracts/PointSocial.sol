@@ -313,6 +313,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         return profileByOwner[id_];
     }
 
+    // Data Migrator Functions - only callable by _migrator
+
     function add(
         uint256 id,
         address author,
@@ -366,5 +368,23 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
             emit StateChange(postId, author, block.timestamp, Action.Comment);
     }
 
+    function addProfile(
+        address user,
+        bytes32 name,
+        bytes32 location,
+        bytes32 about,
+        bytes32 avatar,
+        bytes32 banner
+    ) public {
+        require(msg.sender == _migrator, "Access Denied");
+
+            profileByOwner[user].displayName = name;
+            profileByOwner[user].displayLocation = location;
+            profileByOwner[user].displayAbout = about;
+            profileByOwner[user].avatar = avatar;
+            profileByOwner[user].banner = banner;
+            
+            emit ProfileChange(user, block.timestamp);
+    }
 
 }
