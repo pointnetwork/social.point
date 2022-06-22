@@ -1,25 +1,62 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
 
 describe("PointSocial contract", function () {
 
     let pointSocial;
+    let identityContract;
 	let owner;
 	let addr1;
 	let addr2;
-	let addrs;
-	let handle;
+	let addr3;
+    let addrs;
+	let handle = "social";
     let postContent = "0x9d6b0f937680809a01639ad1ae4770241c7c8a0ded490d2f023669f18c6d744b";
     let postimage = '0x5f04837d78fa7a656419f98d73fc1ddaac1bfdfca9a244a2ee128737a186da6e';
 
     beforeEach(async function () {
-		[owner, addr1, addr2, ...addrs] = await ethers.getSigners();
+		[owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
+        const identityFactory = await ethers.getContractFactory("Identity");
+        identityContract = await upgrades.deployProxy(identityFactory, [], {kind: 'uups'});
+        await identityContract.deployed();
         const factory = await ethers.getContractFactory("PointSocial");
-        pointSocial = await factory.deploy()
-        pointSocial.initialize();
+        pointSocial = await upgrades.deployProxy(factory, [identityContract.address, handle], {kind: 'uups'});        
+        await pointSocial.deployed();
     });
 
+    describe("Testing deployment functions", function () {
 
+        it("Should upgrade the proxy by a deployer", async function () {
+          await identityContract.setDevMode(true);
+          await identityContract.register(
+            handle, 
+            owner.address, 
+            '0xed17268897bbcb67127ed550cee2068a15fdb6f69097eebeb6e2ace46305d1ce',
+            '0xe1e032c91d4c8fe6bab1f198871dbafb8842f073acff8ee9b822f748b180d7eb');
+          await identityContract.addIdentityDeployer(handle, addr1.address);
+          const factory = await ethers.getContractFactory("PointSocial");
+          let socialFactoryDeployer = factory.connect(addr1);
+    
+          await upgrades.upgradeProxy(pointSocial.address, socialFactoryDeployer);
+        });
+    
+        it("Should not upgrade the proxy by a non-deployer", async function () {
+          await identityContract.setDevMode(true);
+          await identityContract.register(
+            handle, 
+            owner.address, 
+            '0xed17268897bbcb67127ed550cee2068a15fdb6f69097eebeb6e2ace46305d1ce',
+            '0xe1e032c91d4c8fe6bab1f198871dbafb8842f073acff8ee9b822f748b180d7eb');
+    
+          const factory = await ethers.getContractFactory("PointSocial");
+          let socialFactoryDeployer = factory.connect(addr1);
+          await expect(
+            upgrades.upgradeProxy(pointSocial.address, socialFactoryDeployer)
+          ).to.be.revertedWith('You are not a deployer of this identity');
+        });
+    
+    });
+    
 	/*describe("Testing migrator functions", function () {
         it("User can add migrator", async function () {
             await pointSocial.addMigrator(
