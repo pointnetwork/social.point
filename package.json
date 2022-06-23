@@ -41,7 +41,8 @@
     "watch:docker": "./watch.docker.js",
     "build": "npm run clear && cp src/*.html ./public/. && cp src/*.ico ./public/. && cp src/*.css ./public/. && parcel build src/index.js --dist-dir ./public --no-source-maps",
     "watch": "npm run clear && cp src/*.html ./public/. && cp src/*.ico ./public/. && cp src/*.css ./public/. && parcel watch src/index.js --dist-dir ./public/",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx jest",
+    "test:smartcontracts": "npx hardhat test"
   },
   "eslintConfig": {
     "extends": [
@@ -67,12 +68,34 @@
   "devDependencies": {
     "@babel/cli": "^7.17.10",
     "@babel/core": "^7.17.10",
-    "@babel/preset-env": "^7.17.10",
+    "@babel/preset-env": "^7.18.2",
+    "@babel/preset-react": "^7.17.12",
+    "@nomiclabs/hardhat-ethers": "^2.0.6",
+    "@nomiclabs/hardhat-waffle": "^2.0.3",
+    "@openzeppelin/hardhat-upgrades": "^1.19.0",
     "@parcel/transformer-image": "^2.0.0-rc.0",
+    "babel-jest": "^28.1.1",
+    "chai": "^4.3.6",
+    "ethereum-waffle": "^3.4.4",
+    "ethers": "^5.6.8",
+    "hardhat": "^2.9.8",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^26.6.0",
     "parcel": "^2.0.0-rc.0",
-    "react-error-overlay": "^6.0.9"
+    "react-error-overlay": "^6.0.9",
+    "react-test-renderer": "^17.0.2",
+    "solidity-coverage": "^0.7.21"
   },
   "resolutions": {
     "react-error-overlay": "6.0.9"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!@ngrx|(?!deck.gl)|ng-dynamic)"
+    ],
+    "moduleNameMapper": {
+      "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/tests/unit/__mocks__/fileMock.js",
+      "\\.(css|less)$": "identity-obj-proxy"
+    }
   }
 }

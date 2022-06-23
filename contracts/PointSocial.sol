@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./Identity.sol";
 
-
-contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
+contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using Counters for Counters.Counter;
     Counters.Counter internal _postIds;
     Counters.Counter internal _commentIds;
@@ -52,11 +52,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         Action indexed action
     );
 
-
     event ProfileChange(
         address indexed from,
         uint256 indexed date
     );
+
+    address private _identityContractAddr;
+    string private _identityHandle;
 
     uint256[] public postIds;
     mapping(address => uint256[]) public postIdsByOwner;
@@ -72,13 +74,18 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
     enum Action {Migrator, Post, Like, Comment, Edit, Delete}
 
-    function initialize() public initializer onlyProxy {
+    function initialize(address identityContractAddr, string calldata identityHandle) public initializer onlyProxy {
         __Ownable_init();
         __UUPSUpgradeable_init();
+        _identityContractAddr = identityContractAddr;
+        _identityHandle = identityHandle;
     }
 
-    function _authorizeUpgrade(address) internal override onlyOwner {}
-
+    function _authorizeUpgrade(address) internal view override {
+        require(Identity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
+            "You are not a deployer of this identity");
+    }
+    
     function addMigrator(address migrator) public onlyOwner {
         require(_migrator == address(0), "Access Denied");
         _migrator = migrator;
@@ -313,6 +320,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         return profileByOwner[id_];
     }
 
+    // Data Migrator Functions - only callable by _migrator
+
     function add(
         uint256 id,
         address author,
@@ -366,5 +375,23 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
             emit StateChange(postId, author, block.timestamp, Action.Comment);
     }
 
+    function addProfile(
+        address user,
+        bytes32 name,
+        bytes32 location,
+        bytes32 about,
+        bytes32 avatar,
+        bytes32 banner
+    ) public {
+        require(msg.sender == _migrator, "Access Denied");
+
+            profileByOwner[user].displayName = name;
+            profileByOwner[user].displayLocation = location;
+            profileByOwner[user].displayAbout = about;
+            profileByOwner[user].avatar = avatar;
+            profileByOwner[user].banner = banner;
+            
+            emit ProfileChange(user, block.timestamp);
+    }
 
 }

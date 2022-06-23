@@ -20,3 +20,8 @@
 npm-debug.log*
 
 .parcel-cache
+
+#hardhat test folder
+/hardhat
+
+.openzeppelin
