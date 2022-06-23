@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     strategy:
@@ -34,7 +34,7 @@ jobs:
         run: npm run build
 
       - name: Deploy app to point network      
-        uses: docker://pointnetwork/pointnetwork_node:v0.1.70
+        uses: docker://pointnetwork/pointnetwork_node:v0.1.83
         with:
           entrypoint: /bin/sh ${{ github.workspace }}/scripts/entrypoint.sh
         env:
