@@ -1,7 +1,7 @@
 
 const POINT_TIMEOUT = 30 * 1000;
 const MAX_TIMEOUT = 600 * 1000;
-const DEBUG = false;
+const DEBUG = true;
 const DISPLAY_ERRORS = true;
 
 class PointSDK {
@@ -28,7 +28,7 @@ class PointSDK {
             return (result.hasOwnProperty('data'))? result.data: result;
         }
         catch(error) {
-            if (DEBUG || DISPLAY_ERRORS) console.error(`PointSDK call failed: ${error.message} ${callId}: Call: ${component} ${call} ${JSON.stringify(args)}`);
+            if (DEBUG || DISPLAY_ERRORS) console.error(`PointSDK invocation failed: ${error.message} ${callId}: Call: ${component} ${call} ${JSON.stringify(args)}`);
             throw error;
         }
     }

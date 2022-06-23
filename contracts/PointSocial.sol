@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./Identity.sol";
 
-
-contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
+contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using Counters for Counters.Counter;
     Counters.Counter internal _postIds;
     Counters.Counter internal _commentIds;
@@ -52,11 +52,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
         Action indexed action
     );
 
-
     event ProfileChange(
         address indexed from,
         uint256 indexed date
     );
+
+    address private _identityContractAddr;
+    string private _identityHandle;
 
     uint256[] public postIds;
     mapping(address => uint256[]) public postIdsByOwner;
@@ -72,13 +74,18 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable{
 
     enum Action {Migrator, Post, Like, Comment, Edit, Delete}
 
-    function initialize() public initializer onlyProxy {
+    function initialize(address identityContractAddr, string calldata identityHandle) public initializer onlyProxy {
         __Ownable_init();
         __UUPSUpgradeable_init();
+        _identityContractAddr = identityContractAddr;
+        _identityHandle = identityHandle;
     }
 
-    function _authorizeUpgrade(address) internal override onlyOwner {}
-
+    function _authorizeUpgrade(address) internal view override {
+        require(Identity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
+            "You are not a deployer of this identity");
+    }
+    
     function addMigrator(address migrator) public onlyOwner {
         require(_migrator == address(0), "Access Denied");
         _migrator = migrator;
