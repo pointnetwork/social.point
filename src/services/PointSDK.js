@@ -84,7 +84,7 @@ class PointSDK {
 
     static contractCall = async (contract, method, params) => PointSDK._callSDKFunction('contract', 'call', {contract, method, params});
 
-    static contractEvents = async (host, contractName, event, filter) => PointSDK._callSDKFunction('contract', 'events', {host, contractName, event, filter});
+    static contractEvents = async (host = window.location.hostname, contract, event, filter = {}) => PointSDK._callSDKFunction('contract', 'events', {host, contract, event, filter});
 
     static contractSubscribe = async (contract, event, options) => PointSDK._callSDKFunction('contract', 'subscribe', {contract, event, options});
 

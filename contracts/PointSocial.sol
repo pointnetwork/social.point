@@ -46,9 +46,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     event StateChange(
-        uint256 postId,
-        address indexed from,
-        uint256 indexed date,
+        uint256 indexed id,
+        address from,
+        uint256 date,
+        Component indexed component,
         Action indexed action
     );
 
@@ -73,6 +74,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(address => Profile) public profileByOwner;
 
     enum Action {Migrator, Post, Like, Comment, Edit, Delete}
+    enum Component {Contract, Post, Comment}
 
     function initialize(address identityContractAddr, string calldata identityHandle) public initializer onlyProxy {
         __Ownable_init();
@@ -89,7 +91,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function addMigrator(address migrator) public onlyOwner {
         require(_migrator == address(0), "Access Denied");
         _migrator = migrator;
-        emit StateChange(0, msg.sender, block.timestamp, Action.Migrator);
+        emit StateChange(0, msg.sender, block.timestamp, Component.Contract, Action.Migrator);
     }
 
     // Post data functions
@@ -109,7 +111,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         postById[newPostId] = _post;
         postIdsByOwner[msg.sender].push(newPostId);
 
-        emit StateChange(newPostId, msg.sender, block.timestamp, Action.Post);
+        emit StateChange(newPostId, msg.sender, block.timestamp, Component.Post, Action.Post);
     }
 
     function editPost(uint256 postId, bytes32 contents, bytes32 image) public {
@@ -119,7 +121,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         postById[postId].contents = contents;
         postById[postId].image = image;
 
-        emit StateChange(postId, msg.sender, block.timestamp, Action.Edit);
+        emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Edit);
     }
 
     function deletePost(uint256 postId) public {
@@ -129,7 +131,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         
         delete postById[postId];
         
-        emit StateChange(postId, msg.sender, block.timestamp, Action.Delete);
+        emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Delete);
     }
 
     function getAllPosts() public view returns (Post[] memory) {
@@ -220,7 +222,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         commentIdsByOwner[msg.sender].push(newCommentId);
         postById[postId].commentsCount += 1;
 
-        emit StateChange(postId, msg.sender, block.timestamp, Action.Comment);
+        emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Comment);
+        emit StateChange(newCommentId, msg.sender, block.timestamp, Component.Comment, Action.Post);
     }
 
     function editCommentForPost(uint256 commentId, bytes32 contents) public {
@@ -230,7 +233,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         require(msg.sender == comment.from, "ERROR_CANNOT_EDIT_OTHERS_COMMENTS");
         comment.contents = contents;
 
-        emit StateChange(commentId, msg.sender, block.timestamp, Action.Edit);
+        emit StateChange(commentId, msg.sender, block.timestamp, Component.Comment, Action.Edit);
     }
 
     function deleteCommentForPost(uint256 postId, uint256 commentId) public {
@@ -240,7 +243,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         postById[postId].commentsCount -= 1;
         delete commentById[commentId];
 
-        emit StateChange(commentId, msg.sender, block.timestamp, Action.Delete);
+        emit StateChange(commentId, msg.sender, block.timestamp, Component.Comment, Action.Delete);
     }
 
     function getAllCommentsForPost(uint256 postId) public view returns (Comment[] memory)
@@ -290,7 +293,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         likeById[newLikeId] = _like;
         postById[postId].likesCount += 1;
 
-        emit StateChange(postId, msg.sender, block.timestamp, Action.Like);
+        emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Like);
 
         return true;
     }
@@ -347,7 +350,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             postById[_post.id] = _post;
             _postIds.increment();
 
-            emit StateChange(id, author, block.timestamp, Action.Post);
+            emit StateChange(id, author, block.timestamp, Component.Post, Action.Post);
     }
 
     function addComment(
@@ -372,7 +375,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             _commentIds.increment();
             postById[postId].commentsCount += 1;
 
-            emit StateChange(postId, author, block.timestamp, Action.Comment);
+            emit StateChange(postId, author, block.timestamp, Component.Comment, Action.Comment);
     }
 
     function addProfile(
