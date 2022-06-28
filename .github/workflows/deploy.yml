@@ -25,7 +25,6 @@ jobs:
 
       - name: Checkout the code for social point...
         uses: actions/checkout@v3
-        path: './deploy/zapps/social.point'
 
       - name: Installing dependencies for social point...
         run: npm ci --legacy-peer-deps
@@ -33,7 +32,7 @@ jobs:
       - name: Building social point...
         run: npm run build
 
-      - name: Deploy app to point network      
+      - name: Deploy app to point network...
         uses: docker://pointnetwork/pointnetwork_node:v0.1.83
         with:
           entrypoint: /bin/sh ${{ github.workspace }}/scripts/entrypoint.sh
@@ -41,3 +40,4 @@ jobs:
           DEPLOYER: ${{ secrets.deployer }}
           DEPLOY_CONTRACTS: true
           DEPLOY_DEV: true
+
