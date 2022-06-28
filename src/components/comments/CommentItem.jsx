@@ -111,7 +111,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
             try {
                 const profile = await UserManager.getProfile(comment.from);
                 const {identity} = await point.identityToOwner(comment.from);
-                const name = (profile[0] === EMPTY)? identity : point.getString(profile[0], {encoding: 'utf-8'});
+                const name = (profile[0] === EMPTY)? identity : await point.getString(profile[0], {encoding: 'utf-8'});
                 setName(name);
             }
             catch(error) {
