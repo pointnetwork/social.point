@@ -9,6 +9,7 @@ import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined';
 
 import { format } from "timeago.js";
+import orderBy from 'lodash/orderBy';
 import { Link } from "wouter";
 
 import CollapsibleTypography from '../generic/CollapsibleTypography';
@@ -75,6 +76,8 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
     const [actionsOpen, setActionsOpen] = useState(false);
     const [edit, setEdit] = useState(false);
     const [prompt, showPrompt] = useState(false);
+    const [isOwner, setIsOwner] = useState(false);
+    const [updatedAt, setUpdatedAt] = useState();
 
     const styles = useStyles();
     
@@ -103,8 +106,10 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
     const loadComment = async () => {
 
         setLoading(true);
+        let updated;
 
-        if (comment.from === walletAddress) {
+        if (comment.from.toLowerCase() === walletAddress.toLowerCase()) {
+            setIsOwner(true);
             setName((profile && profile.displayName)||identity);
         }
         else {
@@ -119,7 +124,41 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
             }
         }
 
-        setDate(comment.createdAt);
+        try {
+            const updatedEvents = 
+                orderBy(
+                        (await point.contractEvents(window.location.hostname,
+                                                    "PointSocial",
+                                                    "StateChange",
+                                                    { 
+                                                        id: comment.id,
+                                                        component: "2", 
+                                                        action: "4" 
+                                                    })
+                        ).map(event => {
+                            const evt = event.data;
+                            evt.date = parseInt(evt.date);
+                            return evt;
+                        }),
+                        ['date'], 
+                        ['desc']
+                    );
+
+            if (updatedEvents[0]) {
+                updated = updatedEvents[0].date * 1000;
+            }
+        }
+        catch(error) {
+            console.warn(error.message);
+        }
+        finally {
+            setDate(updatedAt || comment.createdAt);
+        }
+
+        if (updated)
+            setUpdatedAt(updated);
+
+        setDate(updated || comment.createdAt);
 
         try {
             const contents =  (comment.contents === EMPTY)? "" : await point.getString(comment.contents,  {encoding: 'utf-8'});
@@ -179,8 +218,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
             setLoading(true);
             
             const storageId = await point.putString(contents);
-            const result = await CommentManager.editComment(comment.id, storageId);
-            console.log(result);
+            await CommentManager.editComment(comment.id, storageId);
 
             setContent(contents);
             setEdit(false);
@@ -295,6 +333,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
                                         </Link>
                                         <Typography variant="caption" display="inline" color="textSecondary" style={{ marginLeft: '8px', marginRight: '6px' }}>•</Typography>
                                         <Typography variant="caption" display="inline" color="textSecondary"> {loading ? <Skeleton /> : format(date) }</Typography>
+                                        { updatedAt && <Typography variant="caption" display="inline" color="textSecondary" style={{ marginLeft: '8px', marginRight: '6px' }}>[Edited]</Typography> }
                                     </>                    
                                 }
                                 secondary={
@@ -310,7 +349,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
                         </>
                 }
                 {
-                    !loading &&  walletAddress === comment.from &&
+                    (!loading &&  isOwner) &&
                     <ListItemSecondaryAction className={styles.action}>
                         <IconButton edge="end" size="small" aria-label="comment-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen}>
                             <MoreHorizOutlinedIcon fontSize="small"/>
