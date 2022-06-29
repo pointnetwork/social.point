@@ -26,6 +26,5 @@ if [ "${DEPLOY_DEV}" ]; then
 	DEPLOY_ARGS="${DEPLOY_ARGS} --dev"	
 fi
 
-ls 
-
+echo ./point deploy $GITHUB_WORKSPACE $DEPLOY_ARGS
 ./point deploy $GITHUB_WORKSPACE $DEPLOY_ARGS
