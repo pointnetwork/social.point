@@ -283,6 +283,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             _likeIdsOnPost.pop();
             delete likeById[_removeId];
             _post.likesCount--;
+
+            emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Like);
             return false;
         }
 
@@ -294,7 +296,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         postById[postId].likesCount += 1;
 
         emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Like);
-
         return true;
     }
 
