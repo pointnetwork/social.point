@@ -3,6 +3,10 @@ import { useLocation } from "wouter";
 import point from "../services/PointSDK";
 import users from '../services/UserManager';
 
+import EventManager from '../services/EventManager';
+
+const events = new EventManager();
+
 const defaultContext = {
   walletAddress: undefined,
   walletError: undefined,
@@ -10,6 +14,7 @@ const defaultContext = {
   profile: undefined,
   goHome: () => {},
   setUserProfile: () => {},
+  events
 };
 
 const AppContext = createContext(defaultContext);
@@ -55,13 +60,15 @@ export const ProvideAppContext = ({ children }) => {
     setLocation('/');
   }, []);
 
+
   const context = {
     walletAddress,
     walletError,
     identity,
     profile,
     setUserProfile,
-    goHome
+    goHome,
+    events
   }
 
   return <AppContext.Provider value={ context }>{ children }</AppContext.Provider>
