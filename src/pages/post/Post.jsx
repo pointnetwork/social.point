@@ -46,7 +46,7 @@ const Post = () => {
     const [alert, setAlert] = useState("");
     const [post, setPost] = useState();
     
-    const { walletAddress } = useAppContext();
+    const { walletAddress, events } = useAppContext();
 
     const styles = useStyles();
   
@@ -88,9 +88,35 @@ const Post = () => {
         getPost();
     }, []);
 
+    useEffect(() => {
+        getEvents();
+        return () => {
+          events.listeners["PointSocial"]["StateChange"].removeListener("StateChange", handleEvents);
+          events.unsubscribe("PointSocial", "StateChange");
+        };
+      }, []);
+    
+      const getEvents = async() => {
+        try {
+          const ev = await events.subscribe("PointSocial", "StateChange");
+          ev.on("StateChange", handleEvents);
+        }
+        catch(error) {
+          console.log(error.message);
+        }
+      }
+    
+      const handleEvents = async(event) => {
+        if (event) {
+          console.log(event);
+          //console.log(event.returnValues);
+        }
+      }
+    
+    
     const main = (post)?
     <Container fixed={false} className={styles.container}>
-        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={true}/>
+        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={false}/>
     </Container>
     : 
     <>

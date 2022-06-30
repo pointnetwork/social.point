@@ -1,5 +1,6 @@
 import "./feed.css";
 import { useState, useEffect } from "react";
+import { useAppContext } from '../../context/AppContext';
 import useInView from 'react-cool-inview'
 import { makeStyles } from '@material-ui/core/styles';
 
@@ -26,7 +27,6 @@ const useStyles = makeStyles((theme) => ({
   },
   observer: {
     display: 'flex',
-/*    alignItems: 'center',*/
     justifyContent: 'center'
   },
   empty: {
@@ -44,7 +44,6 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     minHeight: "50vh",
     flexDirection: "column",
-    /*justifyContent: "center"*/        
   },
   separator: {
     marginTop: "20px",
@@ -53,7 +52,6 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => {
-
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
       if(length === posts.length) return;
@@ -66,6 +64,7 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   const [posts, setPosts] = useState([])
   const [length, setLength] = useState(0);
   const [loading, setLoading] = useState(false);
+  const { events } = useAppContext();
 
   // sorts accending (newest first)
   const compareByTimestamp = ( post1, post2 ) => {
@@ -79,13 +78,34 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   }
 
   useEffect(()=>{
-    console.log('@@@@@@@@@@posts',posts)
-    console.log('@@@@@@@@@@account',account)
-  },[posts,account]);
-
-  useEffect(()=>{
     reloadPosts();
   }, [reload]);
+
+
+  useEffect(() => {
+    getEvents();
+    return () => {
+      events.listeners["PointSocial"]["StateChange"].removeListener("StateChange", handleEvents);
+      events.unsubscribe("PointSocial", "StateChange");
+    };
+  }, []);
+
+  const getEvents = async() => {
+    try {
+      const ev = await events.subscribe("PointSocial", "StateChange");
+      ev.on("StateChange", handleEvents);
+    }
+    catch(error) {
+      console.log(error.message);
+    }
+  }
+
+  const handleEvents = async(event) => {
+    if (event) {
+      //console.log(event);
+      //console.log(event.returnValues);
+    }
+  }
 
   const getPostsLength = async() => {
     try {
@@ -186,7 +206,7 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
               posts.filter(post => post.createdAt > 0).map((post) => (
                   <div key={post.id} className={styles.separator}>
                     <PostCard 
-                      post={post} 
+                      post={post}
                       setUpperLoading={setLoading} 
                       setAlert={setAlert} 
                       canExpand={false} 

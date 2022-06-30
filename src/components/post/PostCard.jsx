@@ -60,6 +60,22 @@ import PostManager from '../../services/PostManager';
 
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
+
+const EventAction = {
+    Migrator: "0",
+    Post: "1",
+    Like: "2",
+    Comment: "3",
+    Edit: "4",
+    Delete: "5",
+}
+
+const EventComponent = {
+    Contract: "0",
+    Post: "1",
+    Comment: "2",
+}
+
 const useStyles = makeStyles((theme) => ({
     backdrop: {
         position: "absolute",
@@ -122,7 +138,7 @@ function DataURIToBlob(dataURI) {
 }
 
 
-const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpanded=false, parentDeletePost}) => {
+const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDeletePost}) => {
 
     const [loading, setLoading] = useState(true);
     const [countersLoading, setCountersLoading] = useState(true);
@@ -140,10 +156,9 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
     
-    const { walletAddress, profile, identity, goHome} = useAppContext();
+    const { walletAddress, profile, identity, goHome, events} = useAppContext();
 
     const [name, setName] = useState();
-    const [color, setColor] = useState(`#${post.from.slice(-6)}`);
 
     const [content, setContent] = useState();
     const [media, setMedia] = useState();
@@ -163,6 +178,21 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
         loadPost();
     }, []);
 
+    useEffect(() => {
+        if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .on("StateChange", handleEvents, { type: "post",  id: post.id });
+        }
+        return () => {
+            if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .removeListener("StateChange", handleEvents, { type: "post",  id: post.id });
+            }
+        }
+    }, []);
+  
     const loadPost = async () => {
 
         if (post.from === walletAddress) {
@@ -204,6 +234,28 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
         setCountersLoading(false);
         setLoading(false);
     };
+
+
+    const handleEvents = async(event) => {
+        console.log("Event detected: " + event);
+        if (event && 
+                (event.component === EventComponent.Post) && 
+                (event.id === post.id)) {
+            switch(event.action) {
+                case EventAction.Like: {
+                    setLikeLoading(true);
+                    const isLiked = await PostManager.checkLikeToPost(post.id);
+                    setLike(isLiked);
+                    const data = await PostManager.getPost(post.id);
+                    setLikes(parseInt(data[5]));
+                    setLikeLoading(false);
+                }
+                break;
+                default:
+                break;
+            }
+        }
+    }
 
     const handleAction = (action) => {
         switch(action) {
@@ -323,23 +375,14 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     const toggleLike = async () => {
         try {
             setLikeLoading(true);
-
             await PostManager.addLikeToPost(post.id);
-
-            const isLiked = await PostManager.checkLikeToPost(post.id);
-            setLike(isLiked);
-
-            //TODO: Change to events
-            const data = await PostManager.getPost(post.id);
-
-            setLikes(parseInt(data[5]));
         }
         catch(error) {
             setAlert(error.message);
         }
-        finally {
+        /*finally {
             setLikeLoading(false);
-        }
+        }*/
     }
 
     const reloadCount = async () => {
