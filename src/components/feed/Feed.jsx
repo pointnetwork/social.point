@@ -7,13 +7,15 @@ import { makeStyles } from '@material-ui/core/styles';
 import unionWith from "lodash/unionWith";
 import isEqual from "lodash/isEqual";
 
-import { Box, Typography } from '@material-ui/core';
+import { Box, Button, Fab, IconButton, Snackbar, SnackbarContent, Typography } from '@material-ui/core';
 
 import HourglassEmptyOutlinedIcon from '@material-ui/icons/HourglassEmptyOutlined';
 import CircularProgressWithIcon from '../generic/CircularProgressWithIcon';
+import RefreshOutlinedIcon from '@material-ui/icons/RefreshOutlined';
 import InboxOutlinedIcon from '@material-ui/icons/InboxOutlined';
 import PostCard from "../post/PostCard";
 
+import EventConstants from "../../events";
 import PostManager from '../../services/PostManager';
 
 const NUM_POSTS_PER_CALL = 5;
@@ -48,10 +50,13 @@ const useStyles = makeStyles((theme) => ({
   separator: {
     marginTop: "20px",
     marginBottom: "20px",
-  }
+  },
+  extendedIcon: {
+    marginRight: theme.spacing(1),
+  },  
 }));
 
-const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => {
+const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
       if(length === posts.length) return;
@@ -64,7 +69,9 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   const [posts, setPosts] = useState([])
   const [length, setLength] = useState(0);
   const [loading, setLoading] = useState(false);
-  const { events } = useAppContext();
+  const [reload, setReload] = useState(false);
+
+  const { walletAddress, events } = useAppContext();
 
   // sorts accending (newest first)
   const compareByTimestamp = ( post1, post2 ) => {
@@ -79,21 +86,19 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
 
   useEffect(()=>{
     reloadPosts();
-  }, [reload]);
-
+  }, []);
 
   useEffect(() => {
     getEvents();
     return () => {
-      events.listeners["PointSocial"]["StateChange"].removeListener("StateChange", handleEvents);
+      events.listeners["PointSocial"]["StateChange"].removeListener("StateChange", handleEvents, { type: 'feed'});
       events.unsubscribe("PointSocial", "StateChange");
     };
   }, []);
 
   const getEvents = async() => {
     try {
-      const ev = await events.subscribe("PointSocial", "StateChange");
-      ev.on("StateChange", handleEvents);
+      (await events.subscribe("PointSocial", "StateChange")).on("StateChange", handleEvents, { type: 'feed'});
     }
     catch(error) {
       console.log(error.message);
@@ -101,16 +106,31 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   }
 
   const handleEvents = async(event) => {
-    if (event) {
-      //console.log(event);
-      //console.log(event.returnValues);
+    //DEBUG
+    console.log("Event detected: " + event);
+    console.log(event);
+    if (event && 
+            (event.component === EventConstants.Component.Feed)) {
+        switch(event.action) {
+            case EventConstants.Action.Create:
+                if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
+                  // Autoload own posts
+                  await reloadPosts();
+                }
+                else {
+                  setReload(true);
+                }
+            break;
+            default:
+            break;
+        }
     }
   }
 
   const getPostsLength = async() => {
     try {
       setLoading(true);
-      const data = await (account? 
+      const data = await (account?
         PostManager.getAllPostsByOwnerLength(account) : 
         PostManager.getAllPostsLength());
 
@@ -134,10 +154,10 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
         .map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
           {
-            id, 
-            from, 
-            contents, 
-            image, 
+            id,
+            from,
+            contents,
+            image,
             createdAt: createdAt*1000, 
             likesCount:parseInt(likesCount), 
             commentsCount:parseInt(commentsCount)
@@ -157,7 +177,6 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
 
   const getPosts = async (loadNew = false) => {
     try {
-      console.log("getPosts");
       setLoading(true);
       const posts = await fetchPosts(loadNew);
       setPosts(prev => {
@@ -178,6 +197,7 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   const reloadPosts = async () => {
     await getPostsLength();
     await getPosts(true);
+    setReload(false);
   }
 
   const deletePost = async (postId) => {
@@ -186,6 +206,14 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
   }
 
   return (
+    <>
+    <Snackbar open={reload}
+              anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <SnackbarContent 
+          message={'New posts available!'}
+          action={<><Button color="secondary" size="small" onClick={()=>{setReload(false)}}>Dismiss</Button><Button color="secondary" size="small" onClick={()=>{reloadPosts()}}>Reload</Button></>}
+        />
+    </Snackbar>
     <div className={styles.root}>
         <Box className={styles.container}>
           { 
@@ -222,6 +250,7 @@ const Feed = ({ account, setAlert, setUpperLoading, reload, canPost=false }) => 
           </div>
         </Box>
     </div>
+    </>
   );
 
 }

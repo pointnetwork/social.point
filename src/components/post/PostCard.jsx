@@ -21,6 +21,8 @@ import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import AccountTreeOutlinedIcon from '@material-ui/icons/AccountTreeOutlined';
 import LanguageOutlinedIcon from '@material-ui/icons/LanguageOutlined';
 
+import EventConstants from "../../events";
+
 import { format } from "timeago.js";
 
 import {Backdrop,
@@ -170,6 +172,8 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
     const [like, setLike] = useState(false);
     const [likeLoading, setLikeLoading] = useState(false);
 
+    const [isOwner, setIsOwner] = useState(false);
+
     const actionsAnchor = useRef();
     const shareAnchor = useRef();
     const expandButton = useRef();
@@ -195,7 +199,8 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
   
     const loadPost = async () => {
 
-        if (post.from === walletAddress) {
+        if (post.from.toLowerCase() === walletAddress.toLowerCase()) {
+            setIsOwner(true);
             setName((profile && profile.displayName) || identity);
         }
         else {
@@ -237,12 +242,13 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
 
 
     const handleEvents = async(event) => {
+        //DEBUG
         console.log("Event detected: " + event);
         if (event && 
-                (event.component === EventComponent.Post) && 
+                (event.component === EventConstants.Component.Post) && 
                 (event.id === post.id)) {
             switch(event.action) {
-                case EventAction.Like: {
+                case EventConstants.Action.Like: {
                     setLikeLoading(true);
                     const isLiked = await PostManager.checkLikeToPost(post.id);
                     setLike(isLiked);
@@ -511,7 +517,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
                 <Card elevation={8} className={styles.card}>
                     <CardHeader
                         avatar={<UserAvatar address={post.from} upperLoading={loading} setAlert={setAlert}/>}
-                        action={((walletAddress === post.from) && (post.commentsCount === 0)) && postActions}
+                        action={(isOwner && (post.commentsCount === 0)) && postActions}
                         title={
                             <Link to={`/profile/${post.from}`}>
                                 <Typography variant="subtitle1" style={{cursor:'pointer'}}>

@@ -116,7 +116,7 @@ const Post = () => {
     
     const main = (post)?
     <Container fixed={false} className={styles.container}>
-        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={false}/>
+        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={true}/>
     </Container>
     : 
     <>

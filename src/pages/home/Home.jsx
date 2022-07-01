@@ -10,17 +10,14 @@ import { Backdrop,
          Snackbar,
          Container } from '@material-ui/core';
 
-import MuiAlert from '@material-ui/lab/Alert';
 
 import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
 import ShareCard from "../../components/share/ShareCard";
 import Feed from "../../components/feed/Feed";
+import Alert from "../../components/generic/Alert";
 
 import AccountBalanceWalletOutlinedIcon from '@material-ui/icons/AccountBalanceWalletOutlined';
 
-function Alert(props) {
-    return <MuiAlert elevation={6} variant="filled" {...props} />;
-}
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -43,11 +40,7 @@ const useStyles = makeStyles((theme) => ({
 
 const Home = () => {
     const [loading, setLoading] = useState(false);
-    const [alert, setAlert] = useState("");
-
-    const [reload, setReload] = useState();
-
-    
+    const [alert, setAlert] = useState("");    
     const { walletAddress } = useAppContext();
 
     const styles = useStyles();
@@ -73,8 +66,8 @@ const Home = () => {
                 <>
                     <Appbar setAlert={setAlert} setLoading={setLoading}/>
                     <Container fixed={true} className={styles.container}>
-                        <ShareCard setAlert={setAlert} setReload={setReload}/>
-                        <Feed setAlert={setAlert} setUpperLoading={setLoading} reload={reload} canPost={true}/>
+                        <ShareCard setAlert={setAlert} />
+                        <Feed setAlert={setAlert} setUpperLoading={setLoading} canPost={true}/>
                     </Container>
                     <Footer />
                 </>
