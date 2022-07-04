@@ -223,7 +223,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         postById[postId].commentsCount += 1;
 
         emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Comment);
-        emit StateChange(newCommentId, msg.sender, block.timestamp, Component.Comment, Action.Create);
     }
 
     function editCommentForPost(uint256 commentId, bytes32 contents) public {
@@ -243,6 +242,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         postById[postId].commentsCount -= 1;
         delete commentById[commentId];
 
+        emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Comment);
         emit StateChange(commentId, msg.sender, block.timestamp, Component.Comment, Action.Delete);
     }
 
@@ -253,6 +253,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             _comments[i] = commentById[commentIdsByPost[postId][i]];
         }
         return _comments;
+    }
+
+    function getCommentById(uint256 id) public view returns (Comment memory) {
+        return commentById[id];
     }
 
     // Likes data functions
