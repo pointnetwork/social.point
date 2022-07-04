@@ -1,29 +1,63 @@
-
-import { expect } from "chai";
-import { ethers } from "hardhat";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { PointSocial__factory } from "../../typechain"
+const { expect } = require("chai");
+const { ethers, upgrades } = require("hardhat");
 
 describe("PointSocial contract", function () {
 
-    let pointSocial: any;
-	let owner: SignerWithAddress;
-	let addr1: SignerWithAddress;
-	let addr2: SignerWithAddress
-	let addrs: SignerWithAddress[];
-	let handle: string;
+    let pointSocial;
+    let identityContract;
+	let owner;
+	let addr1;
+	let addr2;
+	let addr3;
+    let addrs;
+	let handle = "social";
     let postContent = "0x9d6b0f937680809a01639ad1ae4770241c7c8a0ded490d2f023669f18c6d744b";
     let postimage = '0x5f04837d78fa7a656419f98d73fc1ddaac1bfdfca9a244a2ee128737a186da6e';
 
     beforeEach(async function () {
-		[owner, addr1, addr2, ...addrs] = await ethers.getSigners();
-        const factory = await ethers.getContractFactory("PointSocial") as PointSocial__factory;
-        pointSocial = await factory.deploy()
-        pointSocial.initialize();
+		[owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
+        const identityFactory = await ethers.getContractFactory("Identity");
+        identityContract = await upgrades.deployProxy(identityFactory, [], {kind: 'uups'});
+        await identityContract.deployed();
+        const factory = await ethers.getContractFactory("PointSocial");
+        pointSocial = await upgrades.deployProxy(factory, [identityContract.address, handle], {kind: 'uups'});        
+        await pointSocial.deployed();
     });
 
+    describe("Testing deployment functions", function () {
 
-	describe("Testing migrator functions", function () {
+        it("Should upgrade the proxy by a deployer", async function () {
+          await identityContract.setDevMode(true);
+          await identityContract.register(
+            handle, 
+            owner.address, 
+            '0xed17268897bbcb67127ed550cee2068a15fdb6f69097eebeb6e2ace46305d1ce',
+            '0xe1e032c91d4c8fe6bab1f198871dbafb8842f073acff8ee9b822f748b180d7eb');
+          await identityContract.addIdentityDeployer(handle, addr1.address);
+          const factory = await ethers.getContractFactory("PointSocial");
+          let socialFactoryDeployer = factory.connect(addr1);
+    
+          await upgrades.upgradeProxy(pointSocial.address, socialFactoryDeployer);
+        });
+    
+        it("Should not upgrade the proxy by a non-deployer", async function () {
+          await identityContract.setDevMode(true);
+          await identityContract.register(
+            handle, 
+            owner.address, 
+            '0xed17268897bbcb67127ed550cee2068a15fdb6f69097eebeb6e2ace46305d1ce',
+            '0xe1e032c91d4c8fe6bab1f198871dbafb8842f073acff8ee9b822f748b180d7eb');
+    
+          const factory = await ethers.getContractFactory("PointSocial");
+          let socialFactoryDeployer = factory.connect(addr1);
+          await expect(
+            upgrades.upgradeProxy(pointSocial.address, socialFactoryDeployer)
+          ).to.be.revertedWith('You are not a deployer of this identity');
+        });
+    
+    });
+    
+	/*describe("Testing migrator functions", function () {
         it("User can add migrator", async function () {
             await pointSocial.addMigrator(
                 addr1.address
@@ -31,7 +65,7 @@ describe("PointSocial contract", function () {
 
             await expect(
                 pointSocial.addMigrator(addr2.address)
-              ).to.be.revertedWith("Access Denied");
+            ).to.be.revertedWith("Access Denied");
         });
 
         it("User can add migrator migrator can add post", async function () {
@@ -126,7 +160,7 @@ describe("PointSocial contract", function () {
                 pointSocial.connect(addr2).addMigrator(addr2.address)
               ).to.be.revertedWith("Ownable: caller is not the owner");
         });
-    });
+    });*/
 
 	describe("Testing user functions", function () {
        it("User can create post", async function () {

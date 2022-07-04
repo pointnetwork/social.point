@@ -1,0 +1,43 @@
+
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+
+      - name: Installing node version ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Checkout the code for social point...
+        uses: actions/checkout@v3
+
+      - name: Installing dependencies for social point...
+        run: npm ci --legacy-peer-deps
+
+      - name: Building social point...
+        run: npm run build
+
+      - name: Deploy app to point network...
+        uses: docker://pointnetwork/pointnetwork_node:v0.1.83
+        with:
+          entrypoint: /bin/sh ${{ github.workspace }}/scripts/entrypoint.sh
+        env:
+          DEPLOYER: ${{ secrets.deployer }}
+          DEPLOY_CONTRACTS: true
+          DEPLOY_DEV: true
+

@@ -1,7 +1,7 @@
 
 const POINT_TIMEOUT = 30 * 1000;
 const MAX_TIMEOUT = 600 * 1000;
-const DEBUG = false;
+const DEBUG = true;
 const DISPLAY_ERRORS = true;
 
 class PointSDK {
@@ -28,7 +28,7 @@ class PointSDK {
             return (result.hasOwnProperty('data'))? result.data: result;
         }
         catch(error) {
-            if (DEBUG || DISPLAY_ERRORS) console.error(`PointSDK call failed: ${error.message} ${callId}: Call: ${component} ${call} ${JSON.stringify(args)}`);
+            if (DEBUG || DISPLAY_ERRORS) console.error(`PointSDK invocation failed: ${error.message} ${callId}: Call: ${component} ${call} ${JSON.stringify(args)}`);
             throw error;
         }
     }
@@ -84,7 +84,7 @@ class PointSDK {
 
     static contractCall = async (contract, method, params) => PointSDK._callSDKFunction('contract', 'call', {contract, method, params});
 
-    static contractEvents = async (host, contractName, event, filter) => PointSDK._callSDKFunction('contract', 'events', {host, contractName, event, filter});
+    static contractEvents = async (host = window.location.hostname, contract, event, filter = {}) => PointSDK._callSDKFunction('contract', 'events', {host, contract, event, filter});
 
     static contractSubscribe = async (contract, event, options) => PointSDK._callSDKFunction('contract', 'subscribe', {contract, event, options});
 
