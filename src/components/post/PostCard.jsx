@@ -140,7 +140,7 @@ function DataURIToBlob(dataURI) {
 }
 
 
-const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDeletePost}) => {
+const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePost=false}) => {
 
     const [loading, setLoading] = useState(true);
     const [countersLoading, setCountersLoading] = useState(true);
@@ -234,7 +234,6 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
         setDate(post.createdAt);
         setLikes(post.likesCount);
         setComments(post.commentsCount);
-        setComments(post.commentsCount);
 
         setCountersLoading(false);
         setLoading(false);
@@ -242,11 +241,9 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
 
 
     const handleEvents = async(event) => {
-        //DEBUG
-        console.log("Event detected: " + event);
         if (event && 
-                (event.component === EventConstants.Component.Post) && 
-                (event.id === post.id)) {
+            (event.component === EventConstants.Component.Post) && 
+            (event.id === post.id)) {
             switch(event.action) {
                 case EventConstants.Action.Like: {
                     setLikeLoading(true);
@@ -255,6 +252,18 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
                     const data = await PostManager.getPost(post.id);
                     setLikes(parseInt(data[5]));
                     setLikeLoading(false);
+                }
+                break;
+                case EventConstants.Action.Edit:
+                    if (event.from.toLowerCase() !== walletAddress.toLowerCase()) {
+                        await loadPost();
+                    }
+                break;
+                case EventConstants.Action.Comment: {
+                    const p = await PostManager.getPost(post.id);
+                    if (p && (parseInt(p[4]) !== 0)) {
+                        setComments(parseInt(p[6]));
+                    }
                 }
                 break;
                 default:
@@ -304,10 +313,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
         try {
             setLoading(true);
             await PostManager.deletePost(post.id);
-            if (parentDeletePost) {
-                parentDeletePost(post.id);
-            }
-            else {
+            if (singlePost) {
                 await goHome();
             }
         }
@@ -364,7 +370,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
                 throw new Error("Sorry, but you can't create an empty post");
             }
             
-            const result = await PostManager.editPost(post.id, contentId, imageId);
+            await PostManager.editPost(post.id, contentId, imageId);
 
             setContent(newContent);
             setMedia(newMedia);
@@ -389,12 +395,6 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
         /*finally {
             setLikeLoading(false);
         }*/
-    }
-
-    const reloadCount = async () => {
-        const data = await PostManager.getPost(post.id);
-        setLikes(parseInt(data[5]));
-        setComments(parseInt(data[6]));
     }
 
     const handleActionsOpen = () => {
@@ -604,7 +604,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, parentDe
                         }
                     </CardActions>
                     <Collapse in={expanded} timeout="auto" unmountOnExit style={{ width:'100%', height: '100%'}}>
-                        <CommentList postId={post.id} setUpperLoading={setLoading} setAlert={setAlert} reloadCount={reloadCount}/>
+                        <CommentList postId={post.id} setUpperLoading={setLoading} setAlert={setAlert} />
                     </Collapse>
                 </Card>
                 {dialog}

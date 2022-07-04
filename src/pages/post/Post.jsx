@@ -108,7 +108,6 @@ const Post = () => {
     
       const handleEvents = async(event) => {
         if (event) {
-          console.log(event);
           //console.log(event.returnValues);
         }
       }
@@ -116,7 +115,7 @@ const Post = () => {
     
     const main = (post)?
     <Container fixed={false} className={styles.container}>
-        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={true}/>
+        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={true} singlePost={true}/>
     </Container>
     : 
     <>

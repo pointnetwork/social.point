@@ -38,6 +38,7 @@ import Skeleton from '@material-ui/lab/Skeleton';
 import point from "../../services/PointSDK";
 import UserManager from "../../services/UserManager";
 import CommentManager from "../../services/CommentManager";
+import EventConstants from "../../events";
 
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -69,7 +70,7 @@ const useStyles = makeStyles((theme) => ({
     
 }));
 
-const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded = false, preloadedData}) => {
+const CommentItem = ({postId, comment, parentDeleteComment, setAlert}) => {
 
     const [loading, setLoading] = useState(false);
 
@@ -81,7 +82,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
 
     const styles = useStyles();
     
-    const { walletAddress, profile, identity } = useAppContext();
+    const { walletAddress, profile, identity, events } = useAppContext();
 
     const [name, setName] = useState();
     const [content, setContent] = useState();
@@ -91,17 +92,85 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
     const inputRef = useRef();
     
     useEffect(() => {
-        if (preloaded) { setPreloadedComment() }
-        else { loadComment() }
+        loadComment();
     }, []);
 
-    const setPreloadedComment = () => {
-        setName((comment.from === walletAddress)? 
-                ((profile && profile.displayName)||identity):
-                preloadedData.name);
-        setDate(comment.createdAt);
-        setContent(preloadedData.contents);
-    };
+    useEffect(() => {
+        if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .on("StateChange", handleEvents, { type: "comment",  id: comment.id });
+        }
+        return () => {
+            if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .removeListener("StateChange", handleEvents, { type: "comment",  id: comment.id });
+            }
+        }
+    }, []);
+
+    const handleEvents = async(event) => {
+        if (event && 
+            (event.component === EventConstants.Component.Comment) && 
+            (event.id === comment.id)) {
+            switch(event.action) {
+                case EventConstants.Action.Edit:
+                    if (event.from.toLowerCase() !== walletAddress.toLowerCase()) {
+                        await reloadComment();
+                    }
+                break; 
+                default:
+                break;
+            }
+        }
+    }
+
+    const reloadComment = async () => {
+        setLoading(true);
+        try {
+            let updated;
+            const c = await CommentManager.getComment(comment.id);
+            if ((parseInt(c[3]) !== 0)) {
+                const contents =  (c[2] === EMPTY)? "" : await point.getString(c[2],  {encoding: 'utf-8'});
+                setContent(contents);
+            }
+
+            const updatedEvents = 
+                orderBy(
+                        (await point.contractEvents(window.location.hostname,
+                                                    "PointSocial",
+                                                    "StateChange",
+                                                    { 
+                                                        id: comment.id,
+                                                        component: "2", 
+                                                        action: "4" 
+                                                    })
+                        ).map(event => {
+                            const evt = event.data;
+                            evt.date = parseInt(evt.date);
+                            return evt;
+                        }),
+                        ['date'], 
+                        ['desc']
+                    );
+
+            if (updatedEvents[0]) {
+                updated = updatedEvents[0].date * 1000;
+            }
+
+            if (updated)
+                setUpdatedAt(updated);
+
+            setDate(updated || comment.createdAt);
+        }
+        catch(error) {
+            console.warn(error.message);
+        }
+        finally {
+            setLoading(false);            
+        }
+    }
 
     const loadComment = async () => {
 
@@ -115,7 +184,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert, preloaded 
         else {
             try {
                 const profile = await UserManager.getProfile(comment.from);
-                const {identity} = await point.identityToOwner(comment.from);
+                const { identity } = await point.ownerToIdentity(comment.from);
                 const name = (profile[0] === EMPTY)? identity : await point.getString(profile[0], {encoding: 'utf-8'});
                 setName(name);
             }

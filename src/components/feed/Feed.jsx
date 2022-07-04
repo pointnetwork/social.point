@@ -7,11 +7,10 @@ import { makeStyles } from '@material-ui/core/styles';
 import unionWith from "lodash/unionWith";
 import isEqual from "lodash/isEqual";
 
-import { Box, Button, Fab, IconButton, Snackbar, SnackbarContent, Typography } from '@material-ui/core';
+import { Box, Button, Snackbar, SnackbarContent, Typography } from '@material-ui/core';
 
 import HourglassEmptyOutlinedIcon from '@material-ui/icons/HourglassEmptyOutlined';
 import CircularProgressWithIcon from '../generic/CircularProgressWithIcon';
-import RefreshOutlinedIcon from '@material-ui/icons/RefreshOutlined';
 import InboxOutlinedIcon from '@material-ui/icons/InboxOutlined';
 import PostCard from "../post/PostCard";
 
@@ -106,24 +105,31 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   }
 
   const handleEvents = async(event) => {
-    //DEBUG
-    console.log("Event detected: " + event);
-    console.log(event);
-    if (event && 
-            (event.component === EventConstants.Component.Feed)) {
+    if (event) {
+      if (event.component === EventConstants.Component.Feed) {
         switch(event.action) {
-            case EventConstants.Action.Create:
-                if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
-                  // Autoload own posts
-                  await reloadPosts();
-                }
-                else {
-                  setReload(true);
-                }
-            break;
-            default:
-            break;
+          case EventConstants.Action.Create:
+              if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
+                // Autoload own posts
+                await reloadPosts();
+              }
+              else {
+                setReload(true);
+              }
+          break;
+          default:
+          break;
         }
+      }
+      else if (event.component === EventConstants.Component.Post) {
+        switch(event.action) {
+          case EventConstants.Action.Delete:
+            deletePost(event.id);
+          break;
+          default:
+          break;
+        }
+      }
     }
   }
 
@@ -237,8 +243,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
                       post={post}
                       setUpperLoading={setLoading} 
                       setAlert={setAlert} 
-                      canExpand={false} 
-                      parentDeletePost={deletePost}/>
+                      canExpand={false} />
                   </div>
               ))
           }
