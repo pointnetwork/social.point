@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "./point-contracts/IIdentity.sol";
+import "point-contract-manager/contracts/IIdentity.sol";
 
 contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using Counters for Counters.Counter;
@@ -21,8 +21,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 contents;
         bytes32 image;
         uint256 createdAt;
-        uint16 likesCount;
         uint16 commentsCount;
+        uint16 likesCount;
     }
 
     struct Comment {
@@ -114,6 +114,17 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(address => mapping(uint256 => uint256))
         public dislikeIdByUserAndPost;
     mapping(uint256 => Dislike) public dislikeById;
+
+    struct PostWithMetadata {
+        uint256 id;
+        address from;
+        bytes32 contents;
+        bytes32 image;
+        uint256 createdAt;
+        uint16 likesCount;
+        uint16 commentsCount;
+        uint256 dislikesCount;
+    }
 
     modifier postExists(uint256 _postId) {
         require(postById[_postId].from != address(0), "Post does not exist");
@@ -223,12 +234,12 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function getAllPosts() public view returns (Post[] memory) {
-        Post[] memory _posts = new Post[](postIds.length);
+    function getAllPosts() public view returns (PostWithMetadata[] memory) {
+        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](postIds.length);
         for (uint256 i = 0; i < postIds.length; i++) {
-            _posts[i] = postById[postIds[i]];
+            postsWithMetadata[i] = _getPostWithMetadata(postIds[i]);
         }
-        return _posts;
+        return postsWithMetadata;
     }
 
     function getAllPostsLength() public view returns (uint256) {
@@ -244,30 +255,30 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function getPaginatedPosts(uint256 cursor, uint256 howMany)
         public
         view
-        returns (Post[] memory)
+        returns (PostWithMetadata[] memory)
     {
         uint256 length = howMany;
         if (length > postIds.length - cursor) {
             length = postIds.length - cursor;
         }
 
-        Post[] memory _posts = new Post[](length);
+        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](length);
         for (uint256 i = length; i > 0; i--) {
-            _posts[length - i] = postById[postIds[postIds.length - cursor - i]];
+            postsWithMetadata[length - i] = _getPostWithMetadata(postIds[postIds.length - cursor - i]);
         }
-        return _posts;
+        return postsWithMetadata;
     }
 
     function getAllPostsByOwner(address owner)
         public
         view
-        returns (Post[] memory)
+        returns (PostWithMetadata[] memory)
     {
-        Post[] memory _posts = new Post[](postIdsByOwner[owner].length);
+        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](postIdsByOwner[owner].length);
         for (uint256 i = 0; i < postIdsByOwner[owner].length; i++) {
-            _posts[i] = postById[postIdsByOwner[owner][i]];
+            postsWithMetadata[i] = _getPostWithMetadata(postIdsByOwner[owner][i]);
         }
-        return _posts;
+        return postsWithMetadata;
     }
 
     function getAllPostsByOwnerLength(address owner)
@@ -284,11 +295,26 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return length;
     }
 
+    function _getPostWithMetadata(uint256 _postId) internal view returns (PostWithMetadata memory) {
+        Post memory post = postById[_postId];
+        PostWithMetadata memory postWithMetadata = PostWithMetadata(
+            post.id,
+            post.from,
+            post.contents,
+            post.image,
+            post.createdAt,
+            post.likesCount,
+            post.commentsCount,
+            getPostDislikesQty(post.id)
+        );
+        return postWithMetadata;
+    }
+
     function getPaginatedPostsByOwner(
         address owner,
         uint256 cursor,
         uint256 howMany
-    ) public view returns (Post[] memory) {
+    ) public view returns (PostWithMetadata[] memory) {
         uint256 _ownerPostLength = postIdsByOwner[owner].length;
 
         uint256 length = howMany;
@@ -296,13 +322,11 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             length = _ownerPostLength - cursor;
         }
 
-        Post[] memory _posts = new Post[](length);
+        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](length);
         for (uint256 i = length; i > 0; i--) {
-            _posts[length - i] = postById[
-                postIdsByOwner[owner][_ownerPostLength - cursor - i]
-            ];
+            postsWithMetadata[length - i] = _getPostWithMetadata(postIdsByOwner[owner][_ownerPostLength - cursor - i]);
         }
-        return _posts;
+        return postsWithMetadata;
     }
 
     function getPostById(uint256 id) public view returns (Post memory) {
@@ -399,6 +423,21 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return commentById[id];
     }
 
+    function _userAlreadyLikedPost(uint256 postId)
+        internal
+        view
+        returns (bool)
+    {
+        uint256[] memory likeIdsOnPost = likeIdsByPost[postId];
+        uint256 likeIdsOnPostLength = likeIdsOnPost.length;
+        for (uint256 i = 0; i < likeIdsOnPostLength; i++) {
+            if (likeById[likeIdsOnPost[i]].from == msg.sender) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Likes data functions
     function addLikeToPost(uint256 postId) public returns (bool) {
         // Get the post and likes for the postId from the mapping
@@ -438,6 +477,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             return false;
         }
 
+        // remove dislike
+        _removeDislikeFromPost(postId);
+
         _likeIds.increment();
         uint256 newLikeId = _likeIds.current();
         Like memory _like = Like(newLikeId, msg.sender, block.timestamp);
@@ -459,13 +501,12 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @notice Add a dislike to a post by id (or remove it)
      * @dev Add a dislike to a post by id (or remove it)
      * @param _postId - The post id
-     * @param _dislike - Boolean that represents if the dislike is being added or removed
      */
-    function addDislikeToPost(uint256 _postId, bool _dislike)
-        external
-        postExists(_postId)
-    {
-        if (_dislike) {
+    function addDislikeToPost(uint256 _postId) external postExists(_postId) {
+        bool exists = dislikeIdByUserAndPost[msg.sender][_postId] != 0;
+        if (exists) {
+            _removeDislikeFromPost(_postId);
+        } else {
             uint256 dislikeId = _dislikeIds.current();
             _dislikeIds.increment();
 
@@ -485,12 +526,19 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
             uint256[] storage postDislikes = dislikeIdsByPost[_postId];
             postDislikes.push(dislikeId);
-        } else {
-            uint256 dislikeId = dislikeIdByUserAndPost[msg.sender][_postId];
-            dislikeById[dislikeId].active = false;
+
+            // remove like if exists
+            if (_userAlreadyLikedPost(_postId)) {
+                addLikeToPost(_postId);
+            }
         }
 
-        emit DislikeAdded(_postId, msg.sender, block.timestamp, _dislike);
+        emit DislikeAdded(_postId, msg.sender, block.timestamp, !exists);
+    }
+
+    function _removeDislikeFromPost(uint256 _postId) internal {
+            uint256 dislikeId = dislikeIdByUserAndPost[msg.sender][_postId];
+            dislikeById[dislikeId].active = false;
     }
 
     /**
@@ -499,8 +547,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _postId - The post id
      * @return Post's dislikes qty
      */
-    function _getPostDislikesQty(uint256 _postId)
-        internal
+    function getPostDislikesQty(uint256 _postId)
+        public
         view
         returns (uint256)
     {
