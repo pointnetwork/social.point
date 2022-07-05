@@ -38,6 +38,14 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 createdAt;
     }
 
+    struct Dislike {
+        uint256 id;
+        uint256 post;
+        address from;
+        uint256 createdAt;
+        bool active;
+    }
+
     struct Profile {
         bytes32 displayName;
         bytes32 displayLocation;
@@ -54,17 +62,29 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         Action indexed action
     );
 
+    event DislikeAdded(
+        uint256 indexed id,
+        address indexed from,
+        uint256 timestamp,
+        bool active
+    );
+
     event ProfileChange(address indexed from, uint256 indexed date);
 
     address private _identityContractAddr;
     string private _identityHandle;
 
+    // posts
     uint256[] public postIds;
     mapping(address => uint256[]) public postIdsByOwner;
     mapping(uint256 => Post) public postById;
+
+    // comments
     mapping(uint256 => uint256[]) public commentIdsByPost;
     mapping(uint256 => Comment) public commentById;
     mapping(address => uint256[]) public commentIdsByOwner;
+
+    // likes
     mapping(uint256 => uint256[]) public likeIdsByPost;
     mapping(uint256 => Like) public likeById;
 
@@ -79,11 +99,25 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         Edit,
         Delete
     }
+
     enum Component {
         Contract,
         Feed,
         Post,
         Comment
+    }
+
+    // dislikes
+    Counters.Counter internal _dislikeIds;
+    mapping(uint256 => uint256[]) public dislikeIdsByPost;
+    mapping(address => uint256[]) public dislikeIdsByUser;
+    mapping(address => mapping(uint256 => uint256))
+        public dislikeIdByUserAndPost;
+    mapping(uint256 => Dislike) public dislikeById;
+
+    modifier postExists(uint256 _postId) {
+        require(postById[_postId].from != address(0), "Post does not exist");
+        _;
     }
 
     function initialize(
@@ -419,6 +453,92 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             Action.Like
         );
         return true;
+    }
+
+    /**
+     * @notice Add a dislike to a post by id (or remove it)
+     * @dev Add a dislike to a post by id (or remove it)
+     * @param _postId - The post id
+     * @param _dislike - Boolean that represents if the dislike is being added or removed
+     */
+    function addDislikeToPost(uint256 _postId, bool _dislike)
+        external
+        postExists(_postId)
+    {
+        if (_dislike) {
+            uint256 dislikeId = _dislikeIds.current();
+            _dislikeIds.increment();
+
+            Dislike memory dislike = Dislike(
+                dislikeId,
+                _postId,
+                msg.sender,
+                block.timestamp,
+                true
+            );
+            dislikeById[dislikeId] = dislike;
+
+            dislikeIdByUserAndPost[msg.sender][_postId] = dislikeId;
+
+            uint256[] storage userDislikes = dislikeIdsByUser[msg.sender];
+            userDislikes.push(dislikeId);
+
+            uint256[] storage postDislikes = dislikeIdsByPost[_postId];
+            postDislikes.push(dislikeId);
+        } else {
+            uint256 dislikeId = dislikeIdByUserAndPost[msg.sender][_postId];
+            dislikeById[dislikeId].active = false;
+        }
+
+        emit DislikeAdded(_postId, msg.sender, block.timestamp, _dislike);
+    }
+
+    /**
+     * @notice Get a post's dislikes qty
+     * @dev Get a post's dislikes qty
+     * @param _postId - The post id
+     * @return Post's dislikes qty
+     */
+    function _getPostDislikesQty(uint256 _postId)
+        internal
+        view
+        returns (uint256)
+    {
+        Dislike[] memory postDislikes = _getPostDislikes(_postId);
+        return postDislikes.length;
+    }
+
+    /**
+     * @notice Get a post's dislikes array
+     * @dev Get a post's dislikes array
+     * @param _postId - The post id
+     * @return Post's dislikes array
+     */
+    function _getPostDislikes(uint256 _postId)
+        internal
+        view
+        returns (Dislike[] memory)
+    {
+        unchecked {
+            uint256 postDislikesLength = dislikeIdsByPost[_postId].length;
+
+            uint256 activeDislikesQty = 0;
+            Dislike[] memory result = new Dislike[](postDislikesLength);
+            for (uint256 i = 0; i < postDislikesLength; i++) {
+                uint256 dislikeId = dislikeIdsByPost[_postId][i];
+                Dislike memory dislike = dislikeById[dislikeId];
+                if (dislike.active) {
+                    result[i] = dislike;
+                    activeDislikesQty++;
+                }
+            }
+
+            Dislike[] memory trimmed = new Dislike[](activeDislikesQty);
+            for (uint256 j = 0; j < activeDislikesQty; j++) {
+                trimmed[j] = result[j];
+            }
+            return trimmed;
+        }
     }
 
     function checkLikeToPost(uint256 postId) public view returns (bool) {
