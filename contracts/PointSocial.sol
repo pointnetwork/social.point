@@ -337,8 +337,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return postsWithMetadata;
     }
 
-    function getPostById(uint256 id) public view returns (Post memory) {
-        return postById[id];
+    function getPostById(uint256 id) public view returns (PostWithMetadata memory) {
+        return _getPostWithMetadata(id);
     }
 
     // Example: 1,"0x0000000000000000000000000000000000000000000068692066726f6d20706e"

@@ -17,6 +17,7 @@ class PostManager {
             (imageId ? imageId.startsWith('0x') ? imageId : `0x${imageId}` : EMPTY)
         ]);
     static addLikeToPost = async (postId) => point.contractSend("PointSocial", "addLikeToPost", [postId]);
+    static addDislikeToPost = async (postId) => point.contractSend("PointSocial", "addDislikeToPost", [postId]);
     static getAllPostsByOwnerLength = async (account) => point.contractCall("PointSocial", "getAllPostsByOwnerLength", [account]);
     static getAllPostsLength = async () => point.contractCall("PointSocial", "getAllPostsLength", []);
     static getPaginatedPostsByOwner = async (account, length, amount) => point.contractCall("PointSocial", "getPaginatedPostsByOwner", [account, length, amount]);

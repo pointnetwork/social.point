@@ -253,20 +253,26 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                 case EventConstants.Action.Like: {
                     setLikeLoading(true);
                     const data = await PostManager.getPost(post.id);
-                    setLike(data.liked);
-                    setDislike(data.disliked);
-                    setLikes(parseInt(data.likesCount));
-                    setDislikes(parseInt(data.dislikesCount));
+                    console.log(data);
+                    const  [,,,,,_likes,, _dislikes, _liked, _disliked] = data;
+                    console.log('like', _likes, _dislikes, _liked, _disliked);
+                    setLikes(parseInt(_likes, 10));
+                    setDislikes(parseInt(_dislikes, 10));
+                    setLike(_liked);
+                    setDislike(_disliked);
                     setLikeLoading(false);
                 }
                 break;
                 case EventConstants.Action.Dislike: {
                     setLikeLoading(true);
                     const data = await PostManager.getPost(post.id);
-                    setLike(data.liked);
-                    setDislike(data.disliked);
-                    setLikes(parseInt(data.likesCount));
-                    setDislikes(parseInt(data.dislikesCount));
+                    console.log(data);
+                    const  [,,,,,_likes,, _dislikes, _liked, _disliked] = data;
+                    console.log('like', _likes, _dislikes, _liked, _disliked);
+                    setLikes(parseInt(_likes, 10));
+                    setDislikes(parseInt(_dislikes, 10));
+                    setLike(_liked);
+                    setDislike(_disliked);
                     setLikeLoading(false);
                 }
                 break;
@@ -616,7 +622,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                                             :
                                             <button type={'button'} className={iconLabelStyles.link} onClick={toggleDislike}>
                                                 { dislike? 
-                                                    <ThumbDownOutlinedIcon className={iconLabelStyles.icon} style={like ? {fontColor: '#ff000'} : {}} color="secondary"/> : 
+                                                    <ThumbDownOutlinedIcon className={iconLabelStyles.icon} style={like ? {fontColor: '#ff0000'} : {}} color="secondary"/> : 
                                                     <ThumbDownOutlinedIcon className={iconLabelStyles.icon}/>
                                                 }
                                                 {dislikes}
