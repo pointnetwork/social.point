@@ -62,13 +62,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         Action indexed action
     );
 
-    event DislikeAdded(
-        uint256 indexed id,
-        address indexed from,
-        uint256 timestamp,
-        bool active
-    );
-
     event ProfileChange(address indexed from, uint256 indexed date);
 
     address private _identityContractAddr;
@@ -97,7 +90,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         Like,
         Comment,
         Edit,
-        Delete
+        Delete,
+        Dislike
     }
 
     enum Component {
@@ -124,6 +118,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint16 likesCount;
         uint16 commentsCount;
         uint256 dislikesCount;
+        bool liked;
+        bool disliked;
     }
 
     modifier postExists(uint256 _postId) {
@@ -305,9 +301,21 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             post.createdAt,
             post.likesCount,
             post.commentsCount,
-            getPostDislikesQty(post.id)
+            getPostDislikesQty(post.id),
+            checkLikeToPost(post.id),
+            checkDislikeToPost(_postId)
         );
         return postWithMetadata;
+    }
+
+    function checkDislikeToPost(uint256 _postId) public view returns (bool) {
+        uint256 dislikeId = dislikeIdByUserAndPost[msg.sender][_postId];
+        bool disliked;
+        if (dislikeId != 0) {
+            Dislike memory dislike = dislikeById[dislikeId];
+            disliked = dislike.active;
+        }
+        return disliked;
     }
 
     function getPaginatedPostsByOwner(
@@ -533,7 +541,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             }
         }
 
-        emit DislikeAdded(_postId, msg.sender, block.timestamp, !exists);
+        emit StateChange(
+            _postId,
+            msg.sender,
+            block.timestamp,
+            Component.Post,
+            Action.Dislike
+        );
     }
 
     function _removeDislikeFromPost(uint256 _postId) internal {

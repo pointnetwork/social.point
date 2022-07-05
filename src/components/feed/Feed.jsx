@@ -158,15 +158,13 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
         PostManager.getPaginatedPosts(onlyNew?0:posts.length,NUM_POSTS_PER_CALL));
 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
-        .map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
+        .map((post) => (
           {
-            id,
-            from,
-            contents,
-            image,
-            createdAt: createdAt*1000, 
-            likesCount:parseInt(likesCount), 
-            commentsCount:parseInt(commentsCount)
+            ...post,
+            createdAt: post.createdAt*1000, 
+            likesCount: parseInt(post.likesCount, 10), 
+            dislikesCount: parseInt(post.dislikesCount, 10), 
+            commentsCount: parseInt(post.commentsCount, 10),
           }
         )
       );
