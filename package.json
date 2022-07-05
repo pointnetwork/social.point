@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "point-contracts": "pointnetwork/point-contracts#v0.1.0",
     "@emoji-mart/data": "^1.0.1",
     "@fontsource/roboto": "^4.5.5",
     "@material-ui/core": "^4.12.3",
@@ -24,6 +23,7 @@
     "eventemitter3": "^4.0.7",
     "gif-frames": "^1.0.1",
     "lodash": "^4.17.21",
+    "point-contract-manager": "github:pointnetwork/point-contracts#v0.1.0",
     "react": "^17.0.2",
     "react-cool-inview": "^2.0.8",
     "react-dom": "^17.0.2",
