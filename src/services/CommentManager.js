@@ -6,17 +6,17 @@ class CommentManager {
     static getComment = async (commentId) => point.contractCall("PointSocial", "getCommentById", [commentId]);
     static getComments = async (postId) => point.contractCall("PointSocial", "getAllCommentsForPost", [postId]);
     static addComment = async (postId, storageId) =>
-        point.contractSend(
+        point.contractCall(
             "PointSocial",
             "addCommentToPost",
-            [postId, storageId]
+            [postId, storageId.startsWith('0x') ? storageId : `0x${storageId}`]
         );
-    static deleteComment = async (postId, commentId) => point.contractSend("PointSocial", "deleteCommentForPost", [postId, commentId]);
+    static deleteComment = async (postId, commentId) => point.contractCall("PointSocial", "deleteCommentForPost", [postId, commentId]);
     static editComment = async (commentId, contentId) =>
-        point.contractSend(
+        point.contractCall(
             "PointSocial",
             "editCommentForPost",
-            [commentId, contentId]);
+            [commentId, contentId.startsWith('0x') ? contentId : `0x${contentId}`]);
 }
 
 export default CommentManager
