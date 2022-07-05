@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { makeStyles } from '@material-ui/core/styles';
+import { useAppContext } from '../../context/AppContext';
 
 import CommentItem from './CommentItem';
 import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
@@ -16,16 +17,18 @@ import InboxOutlinedIcon from '@material-ui/icons/InboxOutlined';
 import RichTextField from '../generic/RichTextField';
 import SendOutlinedIcon from '@material-ui/icons/SendOutlined';
 import IconButton from '@material-ui/core/IconButton';
-import HourglassEmptyOutlinedIcon from '@material-ui/icons/HourglassEmptyOutlined';
 import SmsOutlinedIcon from '@material-ui/icons/SmsOutlined';
 
+/*
 import { VariableSizeList } from 'react-window';
 import AutoSizer from "react-virtualized-auto-sizer";
 import InfiniteLoader from "react-window-infinite-loader";
-import { TramRounded } from "@material-ui/icons";
+import { TramRounded } from "@material-ui/icons";*/
 
 import point from "../../services/PointSDK";
 import CommentManager from "../../services/CommentManager";
+import EventConstants from "../../events";
+
 
 const useStyles = makeStyles((theme) => ({
     backdrop: {
@@ -64,11 +67,11 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
+const CommentList = ({postId, setUpperLoading, setAlert}) => {
 
     const [loading, setLoading] = useState(true);
     const [comments, setComments] = useState([]);
-    const [commentsCount, setCommentsCount] = useState(0);
+    const {events} = useAppContext();
 
     const inputRef = useRef();
 
@@ -77,6 +80,35 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
     useEffect(() => {
         loadComments();
     }, []);
+
+    useEffect(() => {
+        if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .on("StateChange", handleEvents, { type: "comments",  id: postId });
+        }
+        return () => {
+            if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .removeListener("StateChange", handleEvents, { type: "comments",  id: postId });
+            }
+        }
+    }, []);
+
+    const handleEvents = async(event) => {
+        if (event && 
+            (event.component === EventConstants.Component.Post) && 
+            (event.id === postId)) {
+            switch(event.action) {
+                case EventConstants.Action.Comment:
+                    await loadComments();
+                break; 
+                default:
+                break;
+            }
+        }
+    }
 
     // TODO: Set a progressive approach for comment loading // Maybe getting only the indices?
     const loadComments = async () => {
@@ -103,9 +135,8 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
                 const result = await CommentManager.addComment(postId, storageId);
                 console.log(result);
                 setAlert("Your comment was successfully shared!|success");
-                // TODO: Fetch only the latest posts using progressive loading
-                await loadComments();
-                await reloadCount();
+                // TODO: Fetch only the latest comments using progressive loading
+                //await loadComments();
             }
             catch(error) {
                 setAlert(error.message);
@@ -115,12 +146,13 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
             }
         }
     }
-
+    /*
     const deleteComment = async (commentId) => {
         setComments((comments) => comments.filter(comment => comment.id !== commentId));
-        await reloadCount();
-    }   
+    }
+    */  
 
+    /*
     //TODO: get this value from the component
     const getItemSize = index => 75
 
@@ -132,7 +164,7 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
         return (
             <CommentItem key={comments[index].id.toString()} postId={postId} comment={comments[index]} parentDeleteComment={deleteComment} setAlert={setAlert} preloaded={true} preloadedData={{ name: "pepe", contents:"this is pepe"}} style={style}/>            
         );
-    }
+    }*/
       
     return (
         <div className={styles.root}>
@@ -168,7 +200,7 @@ const CommentList = ({postId, setUpperLoading, setAlert, reloadCount}) => {
                                 .filter(c => c.createdAt > 0)
                                 .map((comment) => (
                                 <div key={comment.id}>
-                                    { loading? <Skeleton width="100%"/>: <CommentItem  postId={postId} comment={comment} parentDeleteComment={deleteComment} setUpperLoading={setLoading} setAlert={setAlert}/> }
+                                    { loading? <Skeleton width="100%"/>: <CommentItem  postId={postId} comment={comment} setUpperLoading={setLoading} setAlert={setAlert}/> }
                                     <Divider variant="middle"/>
                                 </div>))
                         }

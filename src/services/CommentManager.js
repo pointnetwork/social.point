@@ -3,6 +3,7 @@ import point from "./PointSDK"
 const EMPTY = '0x0000000000000000000000000000000000000000';
 
 class CommentManager {
+    static getComment = async (commentId) => point.contractCall("PointSocial", "getCommentById", [commentId]);
     static getComments = async (postId) => point.contractCall("PointSocial", "getAllCommentsForPost", [postId]);
     static addComment = async (postId, storageId) =>
         point.contractSend(

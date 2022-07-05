@@ -98,7 +98,7 @@ async function saveFile(file) {
     return storageId;
 }
 
-const ShareCard = ({ setAlert, setReload }) => {
+const ShareCard = ({ setAlert }) => {
 
     const [loading, setLoading] = useState(false);
     const [expanded, setExpanded] = useState(false);
@@ -134,7 +134,6 @@ const ShareCard = ({ setAlert, setReload }) => {
 
             setAlert("Your post was successfully shared!|success");
             reset();
-            setReload(Date.now());
         }
         catch(error) {
             setAlert(error.message)

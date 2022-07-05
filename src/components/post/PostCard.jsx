@@ -21,6 +21,8 @@ import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import AccountTreeOutlinedIcon from '@material-ui/icons/AccountTreeOutlined';
 import LanguageOutlinedIcon from '@material-ui/icons/LanguageOutlined';
 
+import EventConstants from "../../events";
+
 import { format } from "timeago.js";
 
 import {Backdrop,
@@ -59,6 +61,22 @@ import UserManager from '../../services/UserManager';
 import PostManager from '../../services/PostManager';
 
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+
+const EventAction = {
+    Migrator: "0",
+    Post: "1",
+    Like: "2",
+    Comment: "3",
+    Edit: "4",
+    Delete: "5",
+}
+
+const EventComponent = {
+    Contract: "0",
+    Post: "1",
+    Comment: "2",
+}
 
 const useStyles = makeStyles((theme) => ({
     backdrop: {
@@ -122,7 +140,7 @@ function DataURIToBlob(dataURI) {
 }
 
 
-const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpanded=false, parentDeletePost}) => {
+const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePost=false}) => {
 
     const [loading, setLoading] = useState(true);
     const [countersLoading, setCountersLoading] = useState(true);
@@ -140,10 +158,9 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
     
-    const { walletAddress, profile, identity, goHome} = useAppContext();
+    const { walletAddress, profile, identity, goHome, events} = useAppContext();
 
     const [name, setName] = useState();
-    const [color, setColor] = useState(`#${post.from.slice(-6)}`);
 
     const [content, setContent] = useState();
     const [media, setMedia] = useState();
@@ -155,6 +172,8 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     const [like, setLike] = useState(false);
     const [likeLoading, setLikeLoading] = useState(false);
 
+    const [isOwner, setIsOwner] = useState(false);
+
     const actionsAnchor = useRef();
     const shareAnchor = useRef();
     const expandButton = useRef();
@@ -163,9 +182,25 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
         loadPost();
     }, []);
 
+    useEffect(() => {
+        if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .on("StateChange", handleEvents, { type: "post",  id: post.id });
+        }
+        return () => {
+            if (events.listeners["PointSocial"] &&
+            events.listeners["PointSocial"]["StateChange"]) {
+                events.listeners["PointSocial"]["StateChange"]
+                    .removeListener("StateChange", handleEvents, { type: "post",  id: post.id });
+            }
+        }
+    }, []);
+  
     const loadPost = async () => {
 
-        if (post.from === walletAddress) {
+        if (post.from.toLowerCase() === walletAddress.toLowerCase()) {
+            setIsOwner(true);
             setName((profile && profile.displayName) || identity);
         }
         else {
@@ -199,11 +234,43 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
         setDate(post.createdAt);
         setLikes(post.likesCount);
         setComments(post.commentsCount);
-        setComments(post.commentsCount);
 
         setCountersLoading(false);
         setLoading(false);
     };
+
+
+    const handleEvents = async(event) => {
+        if (event && 
+            (event.component === EventConstants.Component.Post) && 
+            (event.id === post.id)) {
+            switch(event.action) {
+                case EventConstants.Action.Like: {
+                    setLikeLoading(true);
+                    const isLiked = await PostManager.checkLikeToPost(post.id);
+                    setLike(isLiked);
+                    const data = await PostManager.getPost(post.id);
+                    setLikes(parseInt(data[5]));
+                    setLikeLoading(false);
+                }
+                break;
+                case EventConstants.Action.Edit:
+                    if (event.from.toLowerCase() !== walletAddress.toLowerCase()) {
+                        await loadPost();
+                    }
+                break;
+                case EventConstants.Action.Comment: {
+                    const p = await PostManager.getPost(post.id);
+                    if (p && (parseInt(p[4]) !== 0)) {
+                        setComments(parseInt(p[6]));
+                    }
+                }
+                break;
+                default:
+                break;
+            }
+        }
+    }
 
     const handleAction = (action) => {
         switch(action) {
@@ -246,10 +313,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
         try {
             setLoading(true);
             await PostManager.deletePost(post.id);
-            if (parentDeletePost) {
-                parentDeletePost(post.id);
-            }
-            else {
+            if (singlePost) {
                 await goHome();
             }
         }
@@ -306,7 +370,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                 throw new Error("Sorry, but you can't create an empty post");
             }
             
-            const result = await PostManager.editPost(post.id, contentId, imageId);
+            await PostManager.editPost(post.id, contentId, imageId);
 
             setContent(newContent);
             setMedia(newMedia);
@@ -323,29 +387,14 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
     const toggleLike = async () => {
         try {
             setLikeLoading(true);
-
             await PostManager.addLikeToPost(post.id);
-
-            const isLiked = await PostManager.checkLikeToPost(post.id);
-            setLike(isLiked);
-
-            //TODO: Change to events
-            const data = await PostManager.getPost(post.id);
-
-            setLikes(parseInt(data[5]));
         }
         catch(error) {
             setAlert(error.message);
         }
-        finally {
+        /*finally {
             setLikeLoading(false);
-        }
-    }
-
-    const reloadCount = async () => {
-        const data = await PostManager.getPost(post.id);
-        setLikes(parseInt(data[5]));
-        setComments(parseInt(data[6]));
+        }*/
     }
 
     const handleActionsOpen = () => {
@@ -468,7 +517,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                 <Card elevation={8} className={styles.card}>
                     <CardHeader
                         avatar={<UserAvatar address={post.from} upperLoading={loading} setAlert={setAlert}/>}
-                        action={((walletAddress === post.from) && (post.commentsCount === 0)) && postActions}
+                        action={(isOwner && (post.commentsCount === 0)) && postActions}
                         title={
                             <Link to={`/profile/${post.from}`}>
                                 <Typography variant="subtitle1" style={{cursor:'pointer'}}>
@@ -555,7 +604,7 @@ const PostCard = ({post, setUpperLoading, setAlert, canExpand=true, startExpande
                         }
                     </CardActions>
                     <Collapse in={expanded} timeout="auto" unmountOnExit style={{ width:'100%', height: '100%'}}>
-                        <CommentList postId={post.id} setUpperLoading={setLoading} setAlert={setAlert} reloadCount={reloadCount}/>
+                        <CommentList postId={post.id} setUpperLoading={setLoading} setAlert={setAlert} />
                     </Collapse>
                 </Card>
                 {dialog}

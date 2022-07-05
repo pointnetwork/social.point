@@ -1,8 +1,8 @@
 
 const POINT_TIMEOUT = 30 * 1000;
 const MAX_TIMEOUT = 600 * 1000;
-const DEBUG = true;
-const DISPLAY_ERRORS = true;
+const DEBUG = false;
+const DISPLAY_ERRORS = false;
 
 class PointSDK {
 
@@ -86,7 +86,7 @@ class PointSDK {
 
     static contractEvents = async (host = window.location.hostname, contract, event, filter = {}) => PointSDK._callSDKFunction('contract', 'events', {host, contract, event, filter});
 
-    static contractSubscribe = async (contract, event, options) => PointSDK._callSDKFunction('contract', 'subscribe', {contract, event, options});
+    static contractSubscribe = async (contract, event, options={}) => PointSDK._callSDKFunction('contract', 'subscribe', {contract, event, options});
 
 }
 

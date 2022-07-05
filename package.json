@@ -20,6 +20,7 @@
     "clsx": "^1.1.1",
     "detect-content-type": "^1.2.0",
     "emoji-mart": "^5.0.0",
+    "eventemitter3": "^4.0.7",
     "gif-frames": "^1.0.1",
     "lodash": "^4.17.21",
     "react": "^17.0.2",
@@ -40,6 +41,7 @@
     "start": "react-scripts start",
     "watch:docker": "./watch.docker.js",
     "build": "npm run clear && cp src/*.html ./public/. && cp src/*.ico ./public/. && cp src/*.css ./public/. && parcel build src/index.js --dist-dir ./public --no-source-maps",
+    "build:debug": "npm run clear && cp src/*.html ./public/. && cp src/*.ico ./public/. && cp src/*.css ./public/. && parcel build src/index.js --dist-dir ./public",
     "watch": "npm run clear && cp src/*.html ./public/. && cp src/*.ico ./public/. && cp src/*.css ./public/. && parcel watch src/index.js --dist-dir ./public/",
     "test": "npx jest",
     "test:smartcontracts": "npx hardhat test"
