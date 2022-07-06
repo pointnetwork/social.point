@@ -21,8 +21,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 contents;
         bytes32 image;
         uint256 createdAt;
-        uint16 commentsCount;
         uint16 likesCount;
+        uint16 commentsCount;
     }
 
     struct Comment {
