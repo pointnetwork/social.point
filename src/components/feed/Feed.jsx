@@ -103,7 +103,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
           case EventConstants.Action.Create:
             if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
               // Autoload own posts
-              await reloadPosts();
+              await reloadPosts(true);
             } else {
               setReload(true);
             }
@@ -138,7 +138,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
     setLoading(false);
   };
 
-  const fetchPosts = async (onlyNew = false) => {
+  const fetchPosts = async () => {
     const viewedPostIds = posts.map(({ id }) => id);
 
     try {
@@ -183,11 +183,14 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
     }
   };
 
-  const getPosts = async (loadNew = false) => {
+  const getPosts = async (refresh = false) => {
     try {
       setLoading(true);
-      const posts = await fetchPosts(loadNew);
+      const posts = await fetchPosts();
       setPosts((prev) => {
+        if (refresh) {
+          return posts;
+        }
         const result = unionWith(prev, posts, isEqual);
         return result;
       });
@@ -199,9 +202,9 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
     }
   };
 
-  const reloadPosts = async () => {
+  const reloadPosts = async (refresh = false) => {
     await getPostsLength();
-    await getPosts(true);
+    await getPosts(refresh);
     setReload(false);
   };
 
