@@ -312,12 +312,12 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
 
         uint256 insertedLength = 0;
-        for (uint256 i = length - 1; i >= 0; i--) {
+        for (uint256 i = length; i > 0; i--) {
             if (insertedLength >= _maxQty) {
                 break;
             }
 
-            PostWithMetadata memory _post = _getPostWithMetadata(_ids[i]);
+            PostWithMetadata memory _post = _getPostWithMetadata(_ids[i - 1]);
 
             if (_validPostToBeShown(_post, _idsToFilter)) {
                 _filteredArray[insertedLength] = _post;
