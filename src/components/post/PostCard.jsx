@@ -598,13 +598,13 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                                             ?
                                             <button type={'button'} className={iconLabelStyles.link}>
                                                 <CircularProgressWithIcon 
-                                                    icon={<ThumbUpOutlinedIcon style={{ color: '#f00', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
-                                                    props={{size : 16, style: {color: '#f00', marginLeft: '8px', marginBottom: '8px', }  }} />
+                                                    icon={<ThumbUpOutlinedIcon style={{ color: '#023600', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
+                                                    props={{size : 16, style: {color: '#023600', marginLeft: '8px', marginBottom: '8px', }  }} />
                                             </button>                                                    
                                             :
                                             <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike}>
                                                 { like? 
-                                                    <ThumbUpOutlinedIcon className={iconLabelStyles.icon} style={{fontColor: '#ff000'}} color="secondary"/> : 
+                                                    <ThumbUpOutlinedIcon className={iconLabelStyles.icon} style={{color: '#023600'}}/> : 
                                                     <ThumbUpOutlinedIcon className={iconLabelStyles.icon}/>
                                                 }
                                                 {likes}

@@ -511,7 +511,12 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _postId - The post id
      */
     function addDislikeToPost(uint256 _postId) external postExists(_postId) {
-        bool exists = dislikeIdByUserAndPost[msg.sender][_postId] != 0;
+        uint256 currentDislikeId = dislikeIdByUserAndPost[msg.sender][_postId];
+        bool exists;
+        if (currentDislikeId != 0) {
+            Dislike memory dislike = dislikeById[currentDislikeId];
+            exists = dislike.active;
+        }
         if (exists) {
             _removeDislikeFromPost(_postId);
         } else {
