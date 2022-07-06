@@ -64,6 +64,14 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     event ProfileChange(address indexed from, uint256 indexed date);
 
+    event MultiplersChanged(
+        address indexed from,
+        uint256 timestamp,
+        uint256 likesWeightMultiplier,
+        uint256 dislikesWeightWultiplier,
+        uint256 newWeightMultiplier
+    );
+
     address private _identityContractAddr;
     string private _identityHandle;
 
@@ -120,11 +128,46 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 dislikesCount;
         bool liked;
         bool disliked;
+        int256 weight;
     }
+
+    uint256 public likesWeightMultiplier;
+    uint256 public dislikesWeightWultiplier;
+    uint256 public newWeightMultiplier;
+    uint256 public weightThreshold;
 
     modifier postExists(uint256 _postId) {
         require(postById[_postId].from != address(0), "Post does not exist");
         _;
+    }
+
+    modifier onlyDeployer() {
+        require(
+            IIdentity(_identityContractAddr).isIdentityDeployer(
+                _identityHandle,
+                msg.sender
+            ),
+            "Not a deployer"
+        );
+        _;
+    }
+
+    function setWeights(
+        uint256 _likesWeightMultiplier,
+        uint256 _dislikesWeightWultiplier,
+        uint256 _newWeightMultiplier
+    ) external onlyDeployer {
+        likesWeightMultiplier = _likesWeightMultiplier;
+        dislikesWeightWultiplier = _dislikesWeightWultiplier;
+        newWeightMultiplier = _newWeightMultiplier;
+
+        emit MultiplersChanged(
+            msg.sender,
+            block.timestamp,
+            likesWeightMultiplier,
+            dislikesWeightWultiplier,
+            newWeightMultiplier
+        );
     }
 
     function initialize(
@@ -137,15 +180,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _identityHandle = identityHandle;
     }
 
-    function _authorizeUpgrade(address) internal view override {
-        require(
-            IIdentity(_identityContractAddr).isIdentityDeployer(
-                _identityHandle,
-                msg.sender
-            ),
-            "You are not a deployer of this identity"
-        );
-    }
+    function _authorizeUpgrade(address) internal view override onlyDeployer {}
 
     function addMigrator(address migrator) public onlyOwner {
         require(_migrator == address(0), "Access Denied");
@@ -230,12 +265,86 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function getAllPosts() public view returns (PostWithMetadata[] memory) {
-        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](postIds.length);
-        for (uint256 i = 0; i < postIds.length; i++) {
-            postsWithMetadata[i] = _getPostWithMetadata(postIds[i]);
+    function _inArray(uint256 _number, uint256[] memory _array)
+        internal
+        pure
+        returns (bool)
+    {
+        uint256 length = _array.length;
+        for (uint256 i = 0; i < length; ) {
+            if (_array[i] == _number) {
+                return true;
+            }
+            unchecked {
+                i++;
+            }
         }
-        return postsWithMetadata;
+        return false;
+    }
+
+    function _validPostToBeShown(
+        PostWithMetadata memory _post,
+        uint256[] memory _postIdsToFilter
+    ) public view returns (bool) {
+        // not deleted posts
+        // posts with enough weight
+        // posts not viewed already
+        return
+            _post.createdAt != 0 &&
+            _post.weight >= int256(weightThreshold) &&
+            !_inArray(_post.id, _postIdsToFilter);
+    }
+
+    function _filterPosts(
+        uint256[] memory _idsToFilter,
+        uint256[] memory _ids,
+        uint256 _maxQty
+    ) internal view returns (PostWithMetadata[] memory) {
+        uint256 length = _ids.length;
+
+        PostWithMetadata[] memory _filteredArray = new PostWithMetadata[](
+            _maxQty
+        );
+
+        uint256 insertedLength = 0;
+        for (uint256 i = 0; i < length; ) {
+            if (insertedLength >= _maxQty) {
+                break;
+            }
+
+            PostWithMetadata memory _post = _getPostWithMetadata(_ids[i]);
+
+            if (_validPostToBeShown(_post, _idsToFilter)) {
+                _filteredArray[insertedLength] = _post;
+                unchecked {
+                    insertedLength++;
+                }
+            }
+            unchecked {
+                i++;
+            }
+        }
+
+        PostWithMetadata[] memory _toReturnArray = new PostWithMetadata[](
+            insertedLength
+        );
+
+        for (uint256 j = 0; j < insertedLength; ) {
+            _toReturnArray[j] = _filteredArray[j];
+            unchecked {
+                j++;
+            }
+        }
+
+        return _toReturnArray;
+    }
+
+    function getAllPosts(uint256[] memory _viewedPostsIds)
+        public
+        view
+        returns (PostWithMetadata[] memory)
+    {
+        return _filterPosts(_viewedPostsIds, postIds, postIds.length);
     }
 
     function getAllPostsLength() public view returns (uint256) {
@@ -248,33 +357,24 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return length;
     }
 
-    function getPaginatedPosts(uint256 cursor, uint256 howMany)
-        public
-        view
-        returns (PostWithMetadata[] memory)
-    {
-        uint256 length = howMany;
-        if (length > postIds.length - cursor) {
-            length = postIds.length - cursor;
-        }
-
-        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](length);
-        for (uint256 i = length; i > 0; i--) {
-            postsWithMetadata[length - i] = _getPostWithMetadata(postIds[postIds.length - cursor - i]);
-        }
-        return postsWithMetadata;
+    function getPaginatedPosts(
+        uint256 howMany,
+        uint256[] memory _viewedPostsIds
+    ) public view returns (PostWithMetadata[] memory) {
+        return _filterPosts(_viewedPostsIds, postIds, howMany);
     }
 
-    function getAllPostsByOwner(address owner)
+    function getAllPostsByOwner(address owner, uint256[] memory _viewedPostsIds)
         public
         view
         returns (PostWithMetadata[] memory)
     {
-        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](postIdsByOwner[owner].length);
-        for (uint256 i = 0; i < postIdsByOwner[owner].length; i++) {
-            postsWithMetadata[i] = _getPostWithMetadata(postIdsByOwner[owner][i]);
-        }
-        return postsWithMetadata;
+        return
+            _filterPosts(
+                _viewedPostsIds,
+                postIdsByOwner[owner],
+                postIdsByOwner[owner].length
+            );
     }
 
     function getAllPostsByOwnerLength(address owner)
@@ -291,8 +391,18 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return length;
     }
 
-    function _getPostWithMetadata(uint256 _postId) internal view returns (PostWithMetadata memory) {
+    function _getPostWithMetadata(uint256 _postId)
+        internal
+        view
+        returns (PostWithMetadata memory)
+    {
         Post memory post = postById[_postId];
+        uint256 dislikesCount = getPostDislikesQty(post.id);
+        uint256 likesWeight = post.likesCount * likesWeightMultiplier;
+        uint256 weightPunishment = (dislikesCount * dislikesWeightWultiplier) +
+            (block.timestamp - post.createdAt) *
+            newWeightMultiplier;
+        int256 weight = int256(likesWeight) - int256(weightPunishment);
         PostWithMetadata memory postWithMetadata = PostWithMetadata(
             post.id,
             post.from,
@@ -301,9 +411,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             post.createdAt,
             post.likesCount,
             post.commentsCount,
-            getPostDislikesQty(post.id),
+            dislikesCount,
             checkLikeToPost(post.id),
-            checkDislikeToPost(_postId)
+            checkDislikeToPost(_postId),
+            weight
         );
         return postWithMetadata;
     }
@@ -320,24 +431,17 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     function getPaginatedPostsByOwner(
         address owner,
-        uint256 cursor,
-        uint256 howMany
+        uint256 howMany,
+        uint256[] memory _viewedPostsIds
     ) public view returns (PostWithMetadata[] memory) {
-        uint256 _ownerPostLength = postIdsByOwner[owner].length;
-
-        uint256 length = howMany;
-        if (length > _ownerPostLength - cursor) {
-            length = _ownerPostLength - cursor;
-        }
-
-        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](length);
-        for (uint256 i = length; i > 0; i--) {
-            postsWithMetadata[length - i] = _getPostWithMetadata(postIdsByOwner[owner][_ownerPostLength - cursor - i]);
-        }
-        return postsWithMetadata;
+        return _filterPosts(_viewedPostsIds, postIdsByOwner[owner], howMany);
     }
 
-    function getPostById(uint256 id) public view returns (PostWithMetadata memory) {
+    function getPostById(uint256 id)
+        public
+        view
+        returns (PostWithMetadata memory)
+    {
         return _getPostWithMetadata(id);
     }
 
@@ -556,8 +660,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function _removeDislikeFromPost(uint256 _postId) internal {
-            uint256 dislikeId = dislikeIdByUserAndPost[msg.sender][_postId];
-            dislikeById[dislikeId].active = false;
+        uint256 dislikeId = dislikeIdByUserAndPost[msg.sender][_postId];
+        dislikeById[dislikeId].active = false;
     }
 
     /**
@@ -566,11 +670,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
      * @param _postId - The post id
      * @return Post's dislikes qty
      */
-    function getPostDislikesQty(uint256 _postId)
-        public
-        view
-        returns (uint256)
-    {
+    function getPostDislikesQty(uint256 _postId) public view returns (uint256) {
         Dislike[] memory postDislikes = _getPostDislikes(_postId);
         return postDislikes.length;
     }
