@@ -201,7 +201,7 @@ describe('PointSocial contract', function () {
         '0x0090916c0e6846d5dc8d22560e90782ded96e4efdeb53db214f612a54d4f5fbe'
       );
 
-      const paginatedPosts = await pointSocial.getPaginatedPostsByOwner(owner.address, '10', []);
+      const paginatedPosts = await pointSocial.getPaginatedPostsByOwner(owner.address, 10, []);
 
       expect(paginatedPosts[0].contents).to.be.equal(postContent);
       expect(paginatedPosts[0].image).to.be.equal(postimage);

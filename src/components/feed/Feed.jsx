@@ -72,17 +72,6 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
 
   const { walletAddress, events } = useAppContext();
 
-  // sorts accending (newest first)
-  const compareByTimestamp = (post1, post2) => {
-    if (post1.createdAt < post2.createdAt) {
-      return 1;
-    }
-    if (post1.createdAt > post2.createdAt) {
-      return -1;
-    }
-    return 0;
-  };
-
   useEffect(() => {
     reloadPosts();
   }, []);
@@ -185,7 +174,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
         })
       );
 
-      return newPosts;
+      return newPosts.sort(({ weight: w1 }, { weight: w2 }) => w1 - w2);
     } catch (error) {
       console.log(error.message);
       setAlert(error.message);
@@ -200,7 +189,6 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
       const posts = await fetchPosts(loadNew);
       setPosts((prev) => {
         const result = unionWith(prev, posts, isEqual);
-        result.sort(compareByTimestamp);
         return result;
       });
     } catch (error) {

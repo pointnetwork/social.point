@@ -69,7 +69,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 timestamp,
         uint256 likesWeightMultiplier,
         uint256 dislikesWeightWultiplier,
-        uint256 newWeightMultiplier
+        uint256 oldWeightMultiplier,
+        uint256 initialWeight
     );
 
     address private _identityContractAddr;
@@ -133,8 +134,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     uint256 public likesWeightMultiplier;
     uint256 public dislikesWeightWultiplier;
-    uint256 public newWeightMultiplier;
+    uint256 public oldWeightMultiplier;
     uint256 public weightThreshold;
+    uint256 public initialWeight;
 
     modifier postExists(uint256 _postId) {
         require(postById[_postId].from != address(0), "Post does not exist");
@@ -155,18 +157,21 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function setWeights(
         uint256 _likesWeightMultiplier,
         uint256 _dislikesWeightWultiplier,
-        uint256 _newWeightMultiplier
+        uint256 _oldWeightMultiplier,
+        uint256 _initialWeight
     ) external onlyDeployer {
         likesWeightMultiplier = _likesWeightMultiplier;
         dislikesWeightWultiplier = _dislikesWeightWultiplier;
-        newWeightMultiplier = _newWeightMultiplier;
+        oldWeightMultiplier = _oldWeightMultiplier;
+        initialWeight = _initialWeight;
 
         emit MultiplersChanged(
             msg.sender,
             block.timestamp,
             likesWeightMultiplier,
             dislikesWeightWultiplier,
-            newWeightMultiplier
+            oldWeightMultiplier,
+            initialWeight
         );
     }
 
@@ -296,8 +301,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function _filterPosts(
-        uint256[] memory _idsToFilter,
         uint256[] memory _ids,
+        uint256[] memory _idsToFilter,
         uint256 _maxQty
     ) internal view returns (PostWithMetadata[] memory) {
         uint256 length = _ids.length;
@@ -307,7 +312,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
 
         uint256 insertedLength = 0;
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = length - 1; i >= 0; i--) {
             if (insertedLength >= _maxQty) {
                 break;
             }
@@ -319,9 +324,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
                 unchecked {
                     insertedLength++;
                 }
-            }
-            unchecked {
-                i++;
             }
         }
 
@@ -344,7 +346,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         view
         returns (PostWithMetadata[] memory)
     {
-        return _filterPosts(_viewedPostsIds, postIds, postIds.length);
+        return _filterPosts(postIds, _viewedPostsIds, postIds.length);
     }
 
     function getAllPostsLength() public view returns (uint256) {
@@ -361,7 +363,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 howMany,
         uint256[] memory _viewedPostsIds
     ) public view returns (PostWithMetadata[] memory) {
-        return _filterPosts(_viewedPostsIds, postIds, howMany);
+        return _filterPosts(postIds, _viewedPostsIds, howMany);
     }
 
     function getAllPostsByOwner(address owner, uint256[] memory _viewedPostsIds)
@@ -371,8 +373,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     {
         return
             _filterPosts(
-                _viewedPostsIds,
                 postIdsByOwner[owner],
+                _viewedPostsIds,
                 postIdsByOwner[owner].length
             );
     }
@@ -401,8 +403,11 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 likesWeight = post.likesCount * likesWeightMultiplier;
         uint256 weightPunishment = (dislikesCount * dislikesWeightWultiplier) +
             (block.timestamp - post.createdAt) *
-            newWeightMultiplier;
-        int256 weight = int256(likesWeight) - int256(weightPunishment);
+            oldWeightMultiplier;
+        int256 weight = int256(initialWeight) +
+            int256(likesWeight) -
+            int256(weightPunishment);
+
         PostWithMetadata memory postWithMetadata = PostWithMetadata(
             post.id,
             post.from,
@@ -434,7 +439,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 howMany,
         uint256[] memory _viewedPostsIds
     ) public view returns (PostWithMetadata[] memory) {
-        return _filterPosts(_viewedPostsIds, postIdsByOwner[owner], howMany);
+        return _filterPosts(postIdsByOwner[owner], _viewedPostsIds, howMany);
     }
 
     function getPostById(uint256 id)
