@@ -6,7 +6,10 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./Identity.sol";
+
+interface IIdentity {
+    function isIdentityDeployer(string memory, address) external returns (bool);
+}
 
 contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using Counters for Counters.Counter;
@@ -83,8 +86,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _identityHandle = identityHandle;
     }
 
-    function _authorizeUpgrade(address) internal view override {
-        require(Identity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
+    function _authorizeUpgrade(address) internal override {
+        require(IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
             "You are not a deployer of this identity");
     }
     
