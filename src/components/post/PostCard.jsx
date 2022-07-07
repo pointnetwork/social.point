@@ -17,6 +17,8 @@ import CancelOutlinedIcon from '@material-ui/icons/CancelOutlined';
 import EditOutlinedIcon from '@material-ui/icons/EditOutlined';
 import SaveOutlinedIcon from '@material-ui/icons/SaveOutlined';
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined';
+import FlagOutlinedIcon from '@material-ui/icons/FlagOutlined';
+import VisibilityOutlinedIcon from '@material-ui/icons/VisibilityOutlined';
 
 import AccountTreeOutlinedIcon from '@material-ui/icons/AccountTreeOutlined';
 import LanguageOutlinedIcon from '@material-ui/icons/LanguageOutlined';
@@ -61,22 +63,6 @@ import UserManager from '../../services/UserManager';
 import PostManager from '../../services/PostManager';
 
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
-
-
-const EventAction = {
-    Migrator: "0",
-    Post: "1",
-    Like: "2",
-    Comment: "3",
-    Edit: "4",
-    Delete: "5",
-}
-
-const EventComponent = {
-    Contract: "0",
-    Post: "1",
-    Comment: "2",
-}
 
 const useStyles = makeStyles((theme) => ({
     backdrop: {
@@ -124,7 +110,14 @@ const useStyles = makeStyles((theme) => ({
     wrapper: {
         margin: theme.spacing(1),
         position: 'relative',
-    }
+    },
+    warning: {
+        padding: theme.spacing(2, 2),
+        display: "flex",
+        flexDirection: "column",
+        alignItems:"center",
+        justifyContent: "center"
+    },
 }));
 
 function DataURIToBlob(dataURI) {
@@ -139,17 +132,20 @@ function DataURIToBlob(dataURI) {
     return new Blob([ia], { type: mimeString })
 }
 
-
 const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePost=false}) => {
 
     const [loading, setLoading] = useState(true);
     const [countersLoading, setCountersLoading] = useState(true);
 
     const [expanded, setExpanded] = useState(startExpanded);
+    const [flagged, setFlagged] = useState(post.isFlagged);
+    
     const [actionsOpen, setActionsOpen] = useState(false);
     const [shareOpen, setShareOpen] = useState(false);
     const [edit, setEdit] = useState(false);
     const [prompt, showPrompt] = useState(false);
+    const [promptFlag, showPromptFlag] = useState(false);
+
 
     const styles = useStyles();
     const inputRef = useRef();
@@ -158,7 +154,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
     
-    const { walletAddress, profile, identity, goHome, events} = useAppContext();
+    const { walletAddress, deployer, profile, identity, goHome, events} = useAppContext();
 
     const [name, setName] = useState();
 
@@ -266,6 +262,11 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                     }
                 }
                 break;
+                case EventConstants.Action.Flag: {
+                    const isFlagged = await PostManager.isFlaggedPost(post.id);
+                    setFlagged(isFlagged);
+                }
+                break;
                 default:
                 break;
             }
@@ -286,6 +287,9 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
           break;
           case 'delete':
             showPrompt(true);
+          break;
+          case 'flag':
+            showPromptFlag(true);
           break;
         }
         setActionsOpen(false);  
@@ -383,7 +387,22 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             setLoading(false);
         }
     };
-    
+
+    const flagPost = async () => {
+        try {
+            showPromptFlag(false);
+            setLoading(true);
+            await PostManager.flagPost(post.id);
+        }
+        catch(error) {
+            console.error(error.message);
+            setAlert(error.message);
+        }
+        finally {
+            setLoading(false);
+        }
+    }
+
     const toggleLike = async () => {
         try {
             setLikeLoading(true);
@@ -440,7 +459,29 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
         </Dialog>
     </>
 
-    
+    const flagPrompt = <>
+        <Dialog
+            open={promptFlag}
+            aria-labelledby="alert-dialog-prompt-flag"
+            aria-describedby="alert-dialog-description"
+        >
+            <DialogTitle id="alert-dialog-title">{"Flag post?"}</DialogTitle>
+            <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+                Are you sure you want to flag this post?
+            </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+            <Button onClick={() => showPromptFlag(false)} color="primary">
+                Cancel
+            </Button>
+            <Button onClick={flagPost} color="primary" autoFocus>
+                Flag
+            </Button>
+            </DialogActions>
+        </Dialog>
+        </>
+
     const postActions = <>
         <IconButton aria-label="post-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen}><MoreVertIcon /></IconButton>
         <Menu id="actions-menu"
@@ -450,7 +491,15 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             getContentAnchorEl={null}
             onClose={handleActionsClose}
             open={actionsOpen}>
-        {!edit &&
+        {!edit && deployer &&
+            <MenuItem onClick={(event) => handleAction('flag')}>
+            <ListItemIcon style={{margin: 0}}>
+                <FlagOutlinedIcon fontSize="small" style={{margin: 0}}/>
+            </ListItemIcon>
+            <Typography variant="caption" align="left">Flag</Typography>
+            </MenuItem>
+        }
+        {!edit && isOwner && (post.commentsCount === 0) &&
             <MenuItem onClick={(event) => handleAction('edit')}>
             <ListItemIcon style={{margin: 0}}>
                 <EditOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -458,7 +507,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             <Typography variant="caption" align="left">Edit</Typography>
             </MenuItem>
         }
-        {!edit && 
+        {!edit && isOwner && (post.commentsCount === 0) &&
             <MenuItem onClick={(event) => handleAction('delete')}>
             <ListItemIcon style={{margin: 0}}>
                 <DeleteOutlineOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -466,7 +515,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             <Typography variant="caption" align="left">Delete</Typography>
             </MenuItem>
         }
-        {edit && 
+        {edit && isOwner &&
             <MenuItem onClick={(event) => handleAction('cancel')}>
             <ListItemIcon style={{margin: 0}}>
                 <CancelOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -474,7 +523,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             <Typography variant="caption" align="left">Cancel</Typography>
             </MenuItem>
         }
-        {edit && 
+        {edit && isOwner &&
             <MenuItem onClick={(event) => handleAction('save')}>
             <ListItemIcon style={{margin: 0}}>
                 <SaveOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -511,13 +560,26 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
     return (
         <>
             <div style={{ position: "relative" }}>
-                <Backdrop className={styles.backdrop} open={loading}>
-                    <CircularProgress color="primary" />
+                <Backdrop className={styles.backdrop} open={loading || flagged}>
+                    {loading && <CircularProgress color="primary" />}
+                    {flagged && 
+                        <div className={styles.warning}>
+                            <IconButton 
+                                color="black" 
+                                aria-label="view" 
+                                component="span"
+                                onClick={()=>{setFlagged(false)}}>
+                                <VisibilityOutlinedIcon />
+                            </IconButton>
+                            <Typography 
+                                variant="overline" color="textSecondary"> Warning: Potentially Sensitive Content</Typography>
+                        </div>
+                    }
                 </Backdrop>
-                <Card elevation={8} className={styles.card}>
+                <Card elevation={8} className={styles.card} style={{ filter: flagged ? "blur(10px)" : "none"  }}>
                     <CardHeader
                         avatar={<UserAvatar address={post.from} upperLoading={loading} setAlert={setAlert}/>}
-                        action={(isOwner && (post.commentsCount === 0)) && postActions}
+                        action={(isOwner || deployer) && postActions}
                         title={
                             <Link to={`/profile/${post.from}`}>
                                 <Typography variant="subtitle1" style={{cursor:'pointer'}}>
@@ -608,6 +670,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                     </Collapse>
                 </Card>
                 {dialog}
+                {flagPrompt}
             </div>
         </>
     )
