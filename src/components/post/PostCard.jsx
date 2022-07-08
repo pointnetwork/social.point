@@ -264,6 +264,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                 break;
                 case EventConstants.Action.Flag: {
                     const isFlagged = await PostManager.isFlaggedPost(post.id);
+                    post.isFlagged = isFlagged;
                     setFlagged(isFlagged);
                 }
                 break;
@@ -468,7 +469,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             <DialogTitle id="alert-dialog-title">{"Flag post?"}</DialogTitle>
             <DialogContent>
             <DialogContentText id="alert-dialog-description">
-                Are you sure you want to flag this post?
+                {`Are you sure you want to ${ post.isFlagged? "unflag" : "flag"  } this post?`}
             </DialogContentText>
             </DialogContent>
             <DialogActions>
@@ -476,7 +477,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                 Cancel
             </Button>
             <Button onClick={flagPost} color="primary" autoFocus>
-                Flag
+                { post.isFlagged? "Unflag" : "Flag"  }
             </Button>
             </DialogActions>
         </Dialog>
@@ -496,7 +497,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             <ListItemIcon style={{margin: 0}}>
                 <FlagOutlinedIcon fontSize="small" style={{margin: 0}}/>
             </ListItemIcon>
-            <Typography variant="caption" align="left">Flag</Typography>
+            <Typography variant="caption" align="left">{ post.isFlagged? "Unflag" : "Flag"  }</Typography>
             </MenuItem>
         }
         {!edit && isOwner && (post.commentsCount === 0) &&
