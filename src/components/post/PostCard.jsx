@@ -467,7 +467,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             aria-labelledby="alert-dialog-prompt-flag"
             aria-describedby="alert-dialog-description"
         >
-            <DialogTitle id="alert-dialog-title">{"Flag post?"}</DialogTitle>
+            <DialogTitle id="alert-dialog-title">{`${ post.isFlagged? "Unflag" : "Flag" } post?`}</DialogTitle>
             <DialogContent>
             <DialogContentText id="alert-dialog-description">
                 {`Are you sure you want to ${ post.isFlagged? "unflag" : "flag"  } this post?`}
