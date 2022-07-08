@@ -72,10 +72,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(address => uint256[]) public commentIdsByOwner;
     mapping(uint256 => uint256[]) public likeIdsByPost;
     mapping(uint256 => Like) public likeById;
-    mapping(uint256 => bool) public postIsFlagged;
 
     address private _migrator;
     mapping(address => Profile) public profileByOwner;
+    mapping(uint256 => bool) public postIsFlagged;
 
     enum Action {Migrator, Create, Like, Comment, Edit, Delete, Flag}
     enum Component {Contract, Feed, Post, Comment}
