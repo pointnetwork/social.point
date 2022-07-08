@@ -158,11 +158,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 _likesWeightMultiplier,
         uint256 _dislikesWeightWultiplier,
         uint256 _oldWeightMultiplier,
+        uint256 _weightThreshold,
         uint256 _initialWeight
     ) external onlyDeployer {
         likesWeightMultiplier = _likesWeightMultiplier;
         dislikesWeightWultiplier = _dislikesWeightWultiplier;
         oldWeightMultiplier = _oldWeightMultiplier;
+        weightThreshold = _weightThreshold;
         initialWeight = _initialWeight;
 
         emit MultiplersChanged(
