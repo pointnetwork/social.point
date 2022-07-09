@@ -174,7 +174,16 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
         )  
       );
 
-      return newPosts;
+      return await Promise.all(newPosts.map(async post => {
+        try {
+          post.isFlagged = await PostManager.isFlaggedPost(post.id);
+        }
+        catch(error) {
+          console.warn(error.message);
+        }
+        return post;
+      }));
+
     } catch(error) {
       console.log(error.message);
       setAlert(error.message);

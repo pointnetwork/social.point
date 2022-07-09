@@ -83,6 +83,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     address private _migrator;
     mapping(address => Profile) public profileByOwner;
+    mapping(uint256 => bool) public postIsFlagged;
 
     enum Action {
         Migrator,
@@ -91,7 +92,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         Comment,
         Edit,
         Delete,
-        Dislike
+        Dislike,
+        Flag
     }
 
     enum Component {
@@ -157,6 +159,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             Component.Contract,
             Action.Migrator
         );
+    }
+
+    function isDeployer() public view returns (bool) {
+        return IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender);
     }
 
     // Post data functions
@@ -228,6 +234,16 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             Component.Post,
             Action.Delete
         );
+    }
+
+    function flagPost(uint256 postId) public {
+        require(IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
+            "ERROR_PERMISSION_DENIED");
+        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+
+        postIsFlagged[postId] = !postIsFlagged[postId];
+
+        emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Flag);
     }
 
     function getAllPosts() public view returns (PostWithMetadata[] memory) {
