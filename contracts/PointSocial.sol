@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 interface IIdentity {
-    function isIdentityDeployer(string memory, address) external returns (bool);
+    function isIdentityDeployer(string memory, address) external view returns (bool);
 }
 
 contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
@@ -75,8 +75,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     address private _migrator;
     mapping(address => Profile) public profileByOwner;
+    mapping(uint256 => bool) public postIsFlagged;
 
-    enum Action {Migrator, Create, Like, Comment, Edit, Delete}
+    enum Action {Migrator, Create, Like, Comment, Edit, Delete, Flag}
     enum Component {Contract, Feed, Post, Comment}
 
     function initialize(address identityContractAddr, string calldata identityHandle) public initializer onlyProxy {
@@ -90,11 +91,15 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         require(IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
             "You are not a deployer of this identity");
     }
-    
+
     function addMigrator(address migrator) public onlyOwner {
         require(_migrator == address(0), "Access Denied");
         _migrator = migrator;
         emit StateChange(0, msg.sender, block.timestamp, Component.Contract, Action.Migrator);
+    }
+
+    function isDeployer() public view returns (bool) {
+        return IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender);
     }
 
     // Post data functions
@@ -135,6 +140,16 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         delete postById[postId];
 
         emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Delete);
+    }
+
+    function flagPost(uint256 postId) public {
+        require(IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
+            "ERROR_PERMISSION_DENIED");
+        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+
+        postIsFlagged[postId] = !postIsFlagged[postId];
+
+        emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Flag);
     }
 
     function getAllPosts() public view returns (Post[] memory) {

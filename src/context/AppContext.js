@@ -9,6 +9,7 @@ const events = new EventManager();
 
 const defaultContext = {
   walletAddress: undefined,
+  deployer : false,
   walletError: undefined,
   identity: undefined,
   profile: undefined,
@@ -28,12 +29,14 @@ export const ProvideAppContext = ({ children }) => {
   const [walletError, setWallerError] = useState();
   const [, setLocation] = useLocation();
   const [profile, setUserProfile] = useState();
+  const [deployer, setDeployer] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const { address } = await point.getWalletAddress();
         const { identity } = await point.ownerToIdentity(address);
+        const isDeployer = await point.contractCall("PointSocial", "isDeployer", []);
         const profile = await users.getProfile(address);
         const name = (profile[0] === EMPTY)? identity : await point.getString(profile[0], { encoding: 'utf-8'});
         const location = (profile[1] === EMPTY)? "Point Network" : await point.getString(profile[1], {encoding: 'utf-8'});
@@ -47,6 +50,7 @@ export const ProvideAppContext = ({ children }) => {
           followersCount: 0,
           followingCount: 0,
         });
+        setDeployer(isDeployer);
         setIdentity(identity);
         setWalletAddress(address);
       } catch (error) {
@@ -60,9 +64,9 @@ export const ProvideAppContext = ({ children }) => {
     setLocation('/');
   }, []);
 
-
   const context = {
     walletAddress,
+    deployer,
     walletError,
     identity,
     profile,

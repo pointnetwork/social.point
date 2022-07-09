@@ -58,11 +58,21 @@ const Post = () => {
     };   
     
     const getPost = async () => {
+      console.log("hola");
         try {
           const isPost = params.id.match(/^\d+$/);
+          let isFlagged = false;
+
           if (isPost) {
-            const post = await PostManager.getPost(params.id);
+            const post = await PostManager.getPost(params.id);            
             
+            try {
+              isFlagged = await PostManager.isFlaggedPost(params.id);
+            }
+            catch(error) {
+              console.warn(error);
+            }
+
             if (post && (parseInt(post[4]) !== 0)) {
                 setPost({
                     id: post[0],
@@ -72,6 +82,7 @@ const Post = () => {
                     createdAt: parseInt(post[4])*1000,
                     likesCount: parseInt(post[5]),
                     commentsCount: parseInt(post[6]),
+                    isFlagged
                 })
             }
           }
