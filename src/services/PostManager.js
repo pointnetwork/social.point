@@ -4,6 +4,7 @@ const EMPTY = '0x0000000000000000000000000000000000000000';
 
 class PostManager {
     static getPost = async (postId) => point.contractCall("PointSocial", "getPostById", [postId]);
+    static isFlaggedPost = async (postId) => point.contractCall("PointSocial", "postIsFlagged", [postId]);
     static addPost = async (storageId, imageId) =>
         point.contractCall("PointSocial", "addPost", [
             (storageId ? storageId.startsWith('0x') ? storageId : `0x${storageId}` : EMPTY),
@@ -16,6 +17,7 @@ class PostManager {
             (contentId ? contentId.startsWith('0x') ? contentId : `0x${contentId}` : EMPTY)
             (imageId ? imageId.startsWith('0x') ? imageId : `0x${imageId}` : EMPTY)
         ]);
+    static flagPost = async (postId) => point.contractCall("PointSocial", "flagPost", [postId]);
     static addLikeToPost = async (postId) => point.contractSend("PointSocial", "addLikeToPost", [postId]);
     static addDislikeToPost = async (postId) => point.contractSend("PointSocial", "addDislikeToPost", [postId]);
     static getAllPostsByOwnerLength = async (account) => point.contractCall("PointSocial", "getAllPostsByOwnerLength", [account]);

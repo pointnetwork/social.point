@@ -100,7 +100,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         Comment,
         Edit,
         Delete,
-        Dislike
+        Dislike,
+        Flag
     }
 
     enum Component {
@@ -130,6 +131,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bool liked;
         bool disliked;
         int256 weight;
+        bool flagged;
     }
 
     uint256 public likesWeightMultiplier;
@@ -137,6 +139,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     uint256 public oldWeightMultiplier;
     uint256 public weightThreshold;
     uint256 public initialWeight;
+
+    mapping(uint256 => bool) public postIsFlagged;
 
     modifier postExists(uint256 _postId) {
         require(postById[_postId].from != address(0), "Post does not exist");
@@ -199,6 +203,14 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             Component.Contract,
             Action.Migrator
         );
+    }
+
+    function isDeployer() public view returns (bool) {
+        return
+            IIdentity(_identityContractAddr).isIdentityDeployer(
+                _identityHandle,
+                msg.sender
+            );
     }
 
     // Post data functions
@@ -286,7 +298,37 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
                 i++;
             }
         }
-        return false;
+    }
+
+    function flagPost(uint256 postId) public {
+        require(
+            IIdentity(_identityContractAddr).isIdentityDeployer(
+                _identityHandle,
+                msg.sender
+            ),
+            "ERROR_PERMISSION_DENIED"
+        );
+        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+
+        postIsFlagged[postId] = !postIsFlagged[postId];
+
+        emit StateChange(
+            postId,
+            msg.sender,
+            block.timestamp,
+            Component.Post,
+            Action.Flag
+        );
+    }
+
+    function getAllPosts() public view returns (PostWithMetadata[] memory) {
+        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](
+            postIds.length
+        );
+        for (uint256 i = 0; i < postIds.length; i++) {
+            postsWithMetadata[i] = _getPostWithMetadata(postIds[i]);
+        }
+        return postsWithMetadata;
     }
 
     function _validPostToBeShown(
@@ -341,14 +383,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         }
 
         return _toReturnArray;
-    }
-
-    function getAllPosts(uint256[] memory _viewedPostsIds)
-        public
-        view
-        returns (PostWithMetadata[] memory)
-    {
-        return _filterPosts(postIds, _viewedPostsIds, postIds.length);
     }
 
     function getAllPostsLength() public view returns (uint256) {
@@ -421,7 +455,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             dislikesCount,
             checkLikeToPost(post.id),
             checkDislikeToPost(_postId),
-            weight
+            weight,
+            postIsFlagged[_postId]
         );
         return postWithMetadata;
     }
