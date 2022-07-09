@@ -298,6 +298,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
                 i++;
             }
         }
+        return false;
     }
 
     function flagPost(uint256 postId) public {
