@@ -64,7 +64,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     event ProfileChange(address indexed from, uint256 indexed date);
 
-    event MultiplersChanged(
+    event MultipliersChanged(
         address indexed from,
         uint256 timestamp,
         uint256 likesWeightMultiplier,
@@ -171,7 +171,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         weightThreshold = _weightThreshold;
         initialWeight = _initialWeight;
 
-        emit MultiplersChanged(
+        emit MultipliersChanged(
             msg.sender,
             block.timestamp,
             likesWeightMultiplier,
