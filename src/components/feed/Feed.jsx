@@ -158,17 +158,20 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
         PostManager.getPaginatedPosts(onlyNew?0:posts.length,NUM_POSTS_PER_CALL));
 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
-        .map(([id, from, contents, image, createdAt, likesCount, commentsCount]) => (
+        .map(([id, from, contents, image, createdAt, likesCount, commentsCount, dislikesCount, liked, disliked]) => (
           {
             id,
             from,
             contents,
-            image,
+            image, 
             createdAt: createdAt*1000, 
-            likesCount:parseInt(likesCount), 
-            commentsCount:parseInt(commentsCount)
+            likesCount: parseInt(likesCount, 10), 
+            dislikesCount: parseInt(dislikesCount, 10), 
+            commentsCount: parseInt(commentsCount, 10),
+            liked,
+            disliked,
           }
-        )
+        )  
       );
 
       return await Promise.all(newPosts.map(async post => {

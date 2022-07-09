@@ -4,9 +4,9 @@ import { useAppContext } from '../../context/AppContext';
 import { makeStyles } from '@material-ui/core/styles';
 import { usePushingGutterStyles } from '@mui-treasury/styles/gutter/pushing';
 import { useLabelIconStyles } from '@mui-treasury/styles/icon/label';
-import FavoriteBorderOutlinedIcon from '@material-ui/icons/FavoriteBorderOutlined';
-import FavoriteOutlinedIcon from '@material-ui/icons/FavoriteOutlined';
 import ModeCommentOutlinedIcon from '@material-ui/icons/ModeCommentOutlined';
+import ThumbUpOutlinedIcon from '@material-ui/icons/ThumbUpOutlined';
+import ThumbDownOutlinedIcon from '@material-ui/icons/ThumbDownOutlined';
 
 import { Link } from "wouter";
 
@@ -163,11 +163,15 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
     const [media, setMedia] = useState();
     const [date, setDate] = useState();
 
-    const [likes, setLikes] = useState();
     const [comments, setComments] = useState();
     
     const [like, setLike] = useState(false);
+    const [likes, setLikes] = useState(0);
     const [likeLoading, setLikeLoading] = useState(false);
+    
+    const [dislike, setDislike] = useState(false);
+    const [dislikes, setDislikes] = useState(0);
+    const [dislikeLoading, setDislikeLoading] = useState(false);
 
     const [isOwner, setIsOwner] = useState(false);
 
@@ -219,9 +223,9 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             if (post.image !== EMPTY)  {
                 setMedia(`/_storage/${post.image}`);
             }
-            const isLiked = await PostManager.checkLikeToPost(post.id);
 
-            setLike(isLiked);
+            setLike(post.liked);
+            setDislike(post.disliked);
             setCountersLoading(false);
         }
         catch(error) {
@@ -230,6 +234,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
 
         setDate(post.createdAt);
         setLikes(post.likesCount);
+        setDislikes(post.dislikesCount);
         setComments(post.commentsCount);
 
         setCountersLoading(false);
@@ -244,10 +249,27 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             switch(event.action) {
                 case EventConstants.Action.Like: {
                     setLikeLoading(true);
-                    const isLiked = await PostManager.checkLikeToPost(post.id);
-                    setLike(isLiked);
                     const data = await PostManager.getPost(post.id);
-                    setLikes(parseInt(data[5]));
+                    console.log(data);
+                    const  [,,,,,_likes,, _dislikes, _liked, _disliked] = data;
+                    console.log('like', _likes, _dislikes, _liked, _disliked);
+                    setLikes(parseInt(_likes, 10));
+                    setDislikes(parseInt(_dislikes, 10));
+                    setLike(_liked);
+                    setDislike(_disliked);
+                    setLikeLoading(false);
+                }
+                break;
+                case EventConstants.Action.Dislike: {
+                    setLikeLoading(true);
+                    const data = await PostManager.getPost(post.id);
+                    console.log(data);
+                    const  [,,,,,_likes,, _dislikes, _liked, _disliked] = data;
+                    console.log('like', _likes, _dislikes, _liked, _disliked);
+                    setLikes(parseInt(_likes, 10));
+                    setDislikes(parseInt(_dislikes, 10));
+                    setLike(_liked);
+                    setDislike(_disliked);
                     setLikeLoading(false);
                 }
                 break;
@@ -413,9 +435,17 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
         catch(error) {
             setAlert(error.message);
         }
-        /*finally {
-            setLikeLoading(false);
-        }*/
+        setLikeLoading(false);
+    }
+
+    const toggleDislike = async () => {
+        try {
+            setDislikeLoading(true);
+            await PostManager.addDislikeToPost(post.id);
+        } catch (error) {
+            setAlert(error.message);
+        }
+        setDislikeLoading(false);
     }
 
     const handleActionsOpen = () => {
@@ -632,18 +662,37 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                                             ?
                                             <button type={'button'} className={iconLabelStyles.link}>
                                                 <CircularProgressWithIcon 
-                                                    icon={<FavoriteBorderOutlinedIcon style={{ color: '#f00', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
-                                                    props={{size : 16, style: {color: '#f00', marginLeft: '8px', marginBottom: '8px', }  }} />
+                                                    icon={<ThumbUpOutlinedIcon style={{ color: '#023600', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
+                                                    props={{size : 16, style: {color: '#023600', marginLeft: '8px', marginBottom: '8px', }  }} />
                                             </button>                                                    
                                             :
                                             <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike}>
                                                 { like? 
-                                                    <FavoriteOutlinedIcon className={iconLabelStyles.icon} style={{fontColor: '#ff000'}} color="secondary"/> : 
-                                                    <FavoriteBorderOutlinedIcon className={iconLabelStyles.icon}/>
+                                                    <ThumbUpOutlinedIcon className={iconLabelStyles.icon} style={{color: '#023600'}}/> : 
+                                                    <ThumbUpOutlinedIcon className={iconLabelStyles.icon}/>
                                                 }
                                                 {likes}
                                             </button>
                                         }
+
+                                        {
+                                            dislikeLoading
+                                            ?
+                                            <button type={'button'} className={iconLabelStyles.link}>
+                                                <CircularProgressWithIcon 
+                                                    icon={<ThumbDownOutlinedIcon style={{ color: '#f00', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
+                                                    props={{size : 16, style: {color: '#f00', marginLeft: '8px', marginBottom: '8px', }  }} />
+                                            </button>                                                    
+                                            :
+                                            <button type={'button'} className={iconLabelStyles.link} onClick={toggleDislike}>
+                                                { dislike? 
+                                                    <ThumbDownOutlinedIcon className={iconLabelStyles.icon} style={like ? {fontColor: '#ff0000'} : {}} color="secondary"/> : 
+                                                    <ThumbDownOutlinedIcon className={iconLabelStyles.icon}/>
+                                                }
+                                                {dislikes}
+                                            </button>
+                                        }
+
                                         <button type={'button'} className={iconLabelStyles.link} onClick={()=>(canExpand)? expandButton && expandButton.current && expandButton.current.click(): window.open(`/post/${post.id}`, "_blank")}>
                                             <ModeCommentOutlinedIcon className={iconLabelStyles.icon} />
                                             {comments}

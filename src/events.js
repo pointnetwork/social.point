@@ -6,7 +6,8 @@ const EventConstants = {
         Comment: "3",
         Edit: "4",
         Delete: "5",    
-        Flag: "6",
+        Dislike: "6",
+        Flag: "7",
     },
     Component : {
         Contract: "0",

@@ -274,6 +274,65 @@ describe("PointSocial contract", function () {
         });
        
        
+        it("Add dislike to posts", async () => {
+            await pointSocial.addPost(
+                postContent,
+                postimage
+            )
+
+            await pointSocial.addDislikeToPost(
+                "1"
+            )
+
+            await pointSocial.connect(addr2).addDislikeToPost(
+                "1"
+            )
+            
+            const [post] = await pointSocial.getAllPosts();
+
+            expect(post.dislikesCount).to.be.equal(2);
+        });
+
+        it("Add a dislike should remove user's like", async () => {
+            await pointSocial.addPost(
+                postContent,
+                postimage
+            )
+
+            await pointSocial.addLikeToPost(
+                "1"
+            )
+
+            await pointSocial.addDislikeToPost(
+                "1"
+            )
+
+            const [post] = await pointSocial.getAllPosts();
+
+            expect(post.likesCount).to.be.equal(0);
+            expect(post.dislikesCount).to.be.equal(1);
+        });
+
+        it("Add a like should remove user's dislike", async () => {
+            await pointSocial.addPost(
+                postContent,
+                postimage
+            )
+
+            await pointSocial.addDislikeToPost(
+                "1"
+            )
+
+            await pointSocial.addLikeToPost(
+                "1"
+            )
+
+            const [post] = await pointSocial.getAllPosts();
+
+            expect(post.likesCount).to.be.equal(1);
+            expect(post.dislikesCount).to.be.equal(0);
+        });
+        
         it("Add like to posts", async function () {
             await pointSocial.addPost(
                 postContent,
