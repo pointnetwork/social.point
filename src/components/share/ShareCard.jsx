@@ -156,7 +156,7 @@ const ShareCard = ({ setAlert }) => {
             <Card elevation={8} className={styles.card}>
                 <Box p={1} className={styles.shareBox}>
                     <UserAvatar address={walletAddress} upperLoading={false} setAlert={setAlert} link={false} props={{className:styles.avatar}}/>
-                    <RichTextField ref={inputRef} value="" placeholder={`What's in your mind ${profile && profile.displayName || identity}?`}/>
+                    <RichTextField ref={inputRef} value="" placeholder={`What's on your mind ${profile && profile.displayName || identity}?`}/>
                     <IconButton aria-label="attach" ml={3} onClick={toggleExpanded}>
                         <AddPhotoAlternateOutlinedIcon/>
                     </IconButton>
