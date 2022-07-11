@@ -17,7 +17,10 @@ import PostCard from '../post/PostCard';
 import EventConstants from '../../events';
 import PostManager from '../../services/PostManager';
 
-const NUM_POSTS_PER_CALL = 5;
+import getPostData from '../../mappers/Post';
+
+const NUM_POSTS_PER_PAGE = 5;
+const NUM_POSTS_PER_CALL = 100;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -66,6 +69,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
   });
   const styles = useStyles();
   const [posts, setPosts] = useState([]);
+  const [viewedPostIds, setViewedPostIds] = useState([]);
   const [length, setLength] = useState(0);
   const [loading, setLoading] = useState(false);
   const [reload, setReload] = useState(false);
@@ -139,8 +143,6 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
   };
 
   const fetchPosts = async () => {
-    const viewedPostIds = posts.map(({ id }) => id);
-
     try {
       setLoading(true);
 
@@ -148,33 +150,11 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
         ? PostManager.getPaginatedPostsByOwner(account, NUM_POSTS_PER_CALL, viewedPostIds)
         : PostManager.getPaginatedPosts(NUM_POSTS_PER_CALL, viewedPostIds));
 
-      const newPosts = data.map(
-        ([
-          id,
-          from,
-          contents,
-          image,
-          createdAt,
-          likesCount,
-          commentsCount,
-          dislikesCount,
-          liked,
-          disliked,
-        ]) => ({
-          id,
-          from,
-          contents,
-          image,
-          createdAt: createdAt * 1000,
-          likesCount: parseInt(likesCount, 10),
-          dislikesCount: parseInt(dislikesCount, 10),
-          commentsCount: parseInt(commentsCount, 10),
-          liked,
-          disliked,
-        })
-      );
+      const newPosts = data.map(getPostData);
 
-      return newPosts.sort(({ weight: w1 }, { weight: w2 }) => w1 - w2);
+      return newPosts
+        .sort(({ weight: w1 }, { weight: w2 }) => w2 - w1)
+        .slice(0, NUM_POSTS_PER_PAGE);
     } catch (error) {
       console.log(error.message);
       setAlert(error.message);
@@ -187,12 +167,24 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
     try {
       setLoading(true);
       const posts = await fetchPosts();
+
+      // save posts
       setPosts((prev) => {
         if (refresh) {
           return posts;
         }
         const result = unionWith(prev, posts, isEqual);
         return result;
+      });
+
+      // save viewed posts
+      setViewedPostIds((prev) => {
+        posts.forEach(({ id }) => {
+          if (!prev.includes(id)) {
+            prev.push(id);
+          }
+        });
+        return prev;
       });
     } catch (error) {
       console.log(error);
@@ -203,8 +195,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
   };
 
   const reloadPosts = async (refresh = false) => {
-    await getPostsLength();
-    await getPosts(refresh);
+    await Promise.all([getPostsLength(), getPosts(refresh)]);
     setReload(false);
   };
 
