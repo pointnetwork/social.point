@@ -184,7 +184,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function initialize(
         address identityContractAddr,
         string calldata identityHandle
-    ) public initializer onlyProxy {
+    ) external initializer onlyProxy {
         __Ownable_init();
         __UUPSUpgradeable_init();
         _identityContractAddr = identityContractAddr;
@@ -193,7 +193,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     function _authorizeUpgrade(address) internal view override onlyDeployer {}
 
-    function addMigrator(address migrator) public onlyOwner {
+    function addMigrator(address migrator) external onlyOwner {
         require(_migrator == address(0), "Access Denied");
         _migrator = migrator;
         emit StateChange(
@@ -205,7 +205,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function isDeployer() public view returns (bool) {
+    function isDeployer() external view returns (bool) {
         return
             IIdentity(_identityContractAddr).isIdentityDeployer(
                 _identityHandle,
@@ -214,7 +214,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     // Post data functions
-    function addPost(bytes32 contents, bytes32 image) public {
+    function addPost(bytes32 contents, bytes32 image) external {
         _postIds.increment();
         uint256 newPostId = _postIds.current();
         Post memory _post = Post(
@@ -243,7 +243,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 postId,
         bytes32 contents,
         bytes32 image
-    ) public {
+    ) external {
         require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
         require(
             msg.sender == postById[postId].from,
@@ -262,7 +262,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function deletePost(uint256 postId) public {
+    function deletePost(uint256 postId) external {
         require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
         require(
             msg.sender == postById[postId].from,
@@ -301,7 +301,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return false;
     }
 
-    function flagPost(uint256 postId) public {
+    function flagPost(uint256 postId) external {
         require(
             IIdentity(_identityContractAddr).isIdentityDeployer(
                 _identityHandle,
@@ -322,7 +322,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function getAllPosts() public view returns (PostWithMetadata[] memory) {
+    function getAllPosts() external view returns (PostWithMetadata[] memory) {
         PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](
             postIds.length
         );
@@ -391,7 +391,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return _toReturnArray;
     }
 
-    function getAllPostsLength() public view returns (uint256) {
+    function getAllPostsLength() external view returns (uint256) {
         uint256 length = 0;
         for (uint256 i = 0; i < postIds.length; i++) {
             if (postById[postIds[i]].createdAt > 0) {
@@ -504,7 +504,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     // Example: 1,"0x0000000000000000000000000000000000000000000068692066726f6d20706e"
-    function addCommentToPost(uint256 postId, bytes32 contents) public {
+    function addCommentToPost(uint256 postId, bytes32 contents) external {
         _commentIds.increment();
         uint256 newCommentId = _commentIds.current();
         Comment memory _comment = Comment(
@@ -527,7 +527,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function editCommentForPost(uint256 commentId, bytes32 contents) public {
+    function editCommentForPost(uint256 commentId, bytes32 contents) external {
         Comment storage comment = commentById[commentId];
 
         require(comment.createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
@@ -546,7 +546,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function deleteCommentForPost(uint256 postId, uint256 commentId) public {
+    function deleteCommentForPost(uint256 postId, uint256 commentId) external {
         require(
             commentById[commentId].createdAt != 0,
             "ERROR_COMMENT_DOES_NOT_EXISTS"
@@ -576,7 +576,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function getAllCommentsForPost(uint256 postId)
-        public
+        external
         view
         returns (Comment[] memory)
     {
@@ -589,7 +589,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return _comments;
     }
 
-    function getCommentById(uint256 id) public view returns (Comment memory) {
+    function getCommentById(uint256 id) external view returns (Comment memory) {
         return commentById[id];
     }
 
@@ -784,7 +784,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 about_,
         bytes32 avatar_,
         bytes32 banner_
-    ) public {
+    ) external {
         profileByOwner[msg.sender].displayName = name_;
         profileByOwner[msg.sender].displayLocation = location_;
         profileByOwner[msg.sender].displayAbout = about_;
@@ -806,7 +806,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 image,
         uint16 likesCount,
         uint256 createdAt
-    ) public {
+    ) external {
         require(msg.sender == _migrator, "Access Denied");
 
         Post memory _post = Post({
@@ -839,7 +839,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address author,
         bytes32 contents,
         uint256 createdAt
-    ) public {
+    ) external {
         require(msg.sender == _migrator, "Access Denied");
 
         Comment memory _comment = Comment({
@@ -871,7 +871,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 about,
         bytes32 avatar,
         bytes32 banner
-    ) public {
+    ) external {
         require(msg.sender == _migrator, "Access Denied");
 
         profileByOwner[user].displayName = name;
