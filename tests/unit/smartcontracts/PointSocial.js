@@ -54,7 +54,7 @@ describe('PointSocial contract', function () {
       let socialFactoryDeployer = factory.connect(addr1);
       await expect(
         upgrades.upgradeProxy(pointSocial.address, socialFactoryDeployer)
-      ).to.be.revertedWith('You are not a deployer of this identity');
+      ).to.be.revertedWith('Not a deployer');
     });
   });
 

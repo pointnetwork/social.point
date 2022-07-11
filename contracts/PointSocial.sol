@@ -334,7 +334,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     function _validPostToBeShown(
         PostWithMetadata memory _post,
-        uint256[] memory _postIdsToFilter
+        uint256[] memory _postIdsToFilter,
+        uint256 _newerThanTimestamp
     ) public view returns (bool) {
         // not deleted posts
         // posts with enough weight
@@ -342,13 +343,17 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return
             _post.createdAt != 0 &&
             _post.weight >= int256(weightThreshold) &&
-            !_inArray(_post.id, _postIdsToFilter);
+            !_inArray(_post.id, _postIdsToFilter) &&
+            // get newest posts if timestamp is set
+            (_newerThanTimestamp == 0 ||
+                _post.createdAt >= _newerThanTimestamp);
     }
 
     function _filterPosts(
         uint256[] memory _ids,
         uint256[] memory _idsToFilter,
-        uint256 _maxQty
+        uint256 _maxQty,
+        uint256 _newerThanTimestamp
     ) internal view returns (PostWithMetadata[] memory) {
         uint256 length = _ids.length;
 
@@ -364,7 +369,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
             PostWithMetadata memory _post = _getPostWithMetadata(_ids[i - 1]);
 
-            if (_validPostToBeShown(_post, _idsToFilter)) {
+            if (_validPostToBeShown(_post, _idsToFilter, _newerThanTimestamp)) {
                 _filteredArray[insertedLength] = _post;
                 unchecked {
                     insertedLength++;
@@ -399,12 +404,21 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function getPaginatedPosts(
         uint256 howMany,
         uint256[] memory _viewedPostsIds
-    ) public view returns (PostWithMetadata[] memory) {
-        return _filterPosts(postIds, _viewedPostsIds, howMany);
+    ) external view returns (PostWithMetadata[] memory) {
+        return _filterPosts(postIds, _viewedPostsIds, howMany, 0);
+    }
+
+    function getNewPosts(
+        uint256 _qty,
+        uint256[] memory _viewedPostsIds,
+        uint256 _newerThanTimestamp
+    ) external view returns (PostWithMetadata[] memory) {
+        return
+            _filterPosts(postIds, _viewedPostsIds, _qty, _newerThanTimestamp);
     }
 
     function getAllPostsByOwner(address owner, uint256[] memory _viewedPostsIds)
-        public
+        external
         view
         returns (PostWithMetadata[] memory)
     {
@@ -412,12 +426,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             _filterPosts(
                 postIdsByOwner[owner],
                 _viewedPostsIds,
-                postIdsByOwner[owner].length
+                postIdsByOwner[owner].length,
+                0
             );
     }
 
     function getAllPostsByOwnerLength(address owner)
-        public
+        external
         view
         returns (uint256)
     {
@@ -476,12 +491,12 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address owner,
         uint256 howMany,
         uint256[] memory _viewedPostsIds
-    ) public view returns (PostWithMetadata[] memory) {
-        return _filterPosts(postIdsByOwner[owner], _viewedPostsIds, howMany);
+    ) external view returns (PostWithMetadata[] memory) {
+        return _filterPosts(postIdsByOwner[owner], _viewedPostsIds, howMany, 0);
     }
 
     function getPostById(uint256 id)
-        public
+        external
         view
         returns (PostWithMetadata memory)
     {

@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BigNumber, Contract, ContractReceipt } from 'ethers';
 
 const { expect } = require('chai');
-const { ethers, upgrades } = require('hardhat');
+const { ethers, upgrades, network } = require('hardhat');
 
 const handle = 'social';
 
@@ -12,6 +12,23 @@ function getRandomNumber(max: number) {
 
 const postContent = '0x9d6b0f937680809a01639ad1ae4770241c7c8a0ded490d2f023669f18c6d744b';
 const postImage = '0x5f04837d78fa7a656419f98d73fc1ddaac1bfdfca9a244a2ee128737a186da6e';
+
+type Post = {
+  id: BigNumber;
+  createdAt: BigNumber;
+  weight: number;
+};
+
+const MINUTE = 60;
+const HOUR = MINUTE * 60;
+const DAY = HOUR * 24;
+const MONTH = DAY * 30;
+const YEAR = MONTH * 12;
+
+async function addTime(seconds: number) {
+  await network.provider.send('evm_increaseTime', [seconds]);
+  await network.provider.send('evm_mine');
+}
 
 describe('PointSocial contract', () => {
   let identity: Contract;
@@ -24,8 +41,7 @@ describe('PointSocial contract', () => {
   let badPostId: BigNumber;
   let goodPostId: BigNumber;
 
-  before(async () => {
-    [deployer, goodActor, badActor, ...users] = await ethers.getSigners();
+  async function deployContracts() {
     const identityFactory = await ethers.getContractFactory('Identity');
     identity = await upgrades.deployProxy(identityFactory, [], { kind: 'uups' });
     await identity.deployed();
@@ -41,6 +57,11 @@ describe('PointSocial contract', () => {
       kind: 'uups',
     });
     await contract.deployed();
+  }
+
+  before(async () => {
+    [deployer, goodActor, badActor, ...users] = await ethers.getSigners();
+    await deployContracts();
     await setWeights();
     await populateSocial();
     await voteBadPost();
@@ -87,6 +108,16 @@ describe('PointSocial contract', () => {
     );
   }
 
+  async function addPost(
+    content: string,
+    image: string,
+    user: SignerWithAddress = deployer
+  ): Promise<BigNumber> {
+    const receipt = await doTransaction(contract.connect(user).addPost(postContent, postImage));
+    const id: BigNumber = receipt.events![0].args![0];
+    return id;
+  }
+
   async function voteGoodPost() {
     await Promise.all(
       Array.from(Array(getRandomNumber(10))).map(() =>
@@ -101,34 +132,25 @@ describe('PointSocial contract', () => {
     // random posts
     await Promise.all(
       Array.from(Array(28)).map(() =>
-        doTransaction(
-          contract.connect(users[getRandomNumber(users.length - 1)]).addPost(postContent, postImage)
-        )
+        addPost(postContent, postImage, users[getRandomNumber(users.length - 1)])
       )
     );
 
-    const badPostReceipt = await doTransaction(
-      contract.connect(badActor).addPost(postContent, postImage)
-    );
-    badPostId = badPostReceipt.events![0].args![0];
+    badPostId = await addPost(postContent, postImage, badActor);
 
-    Array.from(Array(20)).map(() =>
-      doTransaction(
-        contract.connect(users[getRandomNumber(users.length - 1)]).addPost(postContent, postImage)
+    // more random posts
+    await Promise.all(
+      Array.from(Array(20)).map(() =>
+        addPost(postContent, postImage, users[getRandomNumber(users.length - 1)])
       )
     );
 
-    const goodPostReceipt = await doTransaction(
-      contract.connect(goodActor).addPost(postContent, postImage)
-    );
-    goodPostId = goodPostReceipt.events![0].args![0];
+    goodPostId = await addPost(postContent, postImage, goodActor);
 
     // more random posts
     await Promise.all(
       Array.from(Array(50)).map(() =>
-        doTransaction(
-          contract.connect(users[getRandomNumber(users.length - 1)]).addPost(postContent, postImage)
-        )
+        addPost(postContent, postImage, users[getRandomNumber(users.length - 1)])
       )
     );
   }
@@ -156,6 +178,32 @@ describe('PointSocial contract', () => {
     // get X amount of posts
     let posts = await contract.getPaginatedPosts(100, []);
     // sort them using weight
-    posts = posts.sort(({ weight: w1 }, { weight: w2 }) => w2 - w1);
+    posts = posts.sort(({ weight: w1 }: Post, { weight: w2 }: Post) => w2 - w1);
+  });
+
+  describe('if a new post is created', () => {
+    let viewedPosts: Post[];
+    before(async () => {
+      viewedPosts = await contract.getPaginatedPosts(100, []);
+      await addTime(HOUR);
+      await addPost(postContent, postImage, users[1]);
+    });
+
+    it(`if the users clicks on 'get newest posts', that post should be returned`, async () => {
+      let newestViewedPostTimestamp = BigNumber.from(0);
+      const viewedPostIds = viewedPosts.map(({ createdAt, id }: Post) => {
+        newestViewedPostTimestamp = newestViewedPostTimestamp.lt(createdAt)
+          ? createdAt
+          : newestViewedPostTimestamp;
+        return id;
+      });
+      const newPostsToView = await contract.getNewPosts(
+        10,
+        viewedPostIds,
+        newestViewedPostTimestamp
+      );
+      expect(newPostsToView.length).to.equal(1);
+      expect(newPostsToView[0].from).to.equal(users[1].address);
+    });
   });
 });
