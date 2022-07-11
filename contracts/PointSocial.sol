@@ -342,7 +342,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         // posts not viewed already
         return
             _post.createdAt != 0 &&
-            _post.weight >= int256(weightThreshold) &&
+            (weightThreshold == 0 || _post.weight >= int256(weightThreshold)) &&
             !_inArray(_post.id, _postIdsToFilter) &&
             // get newest posts if timestamp is set
             (_newerThanTimestamp == 0 ||

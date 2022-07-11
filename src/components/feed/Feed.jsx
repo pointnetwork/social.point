@@ -70,6 +70,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
   const styles = useStyles();
   const [posts, setPosts] = useState([]);
   const [viewedPostIds, setViewedPostIds] = useState([]);
+  const [newestPost, setNewestPost] = useState(null);
   const [length, setLength] = useState(0);
   const [loading, setLoading] = useState(false);
   const [reload, setReload] = useState(false);
@@ -106,8 +107,8 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
         switch (event.action) {
           case EventConstants.Action.Create:
             if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
-              // Autoload own posts
-              await reloadPosts(true);
+              // Add new owned post to top of the feed
+              await addPostToFeed(event.id);
             } else {
               setReload(true);
             }
@@ -142,13 +143,24 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
     setLoading(false);
   };
 
-  const fetchPosts = async () => {
+  const addPostToFeed = async (id) => {
+    const newPost = getPostData(await PostManager.getPost(id));
+    setPosts((posts) => {
+      return [newPost, ...posts];
+    });
+  };
+
+  const fetchPosts = async (onlyNew = false) => {
     try {
       setLoading(true);
 
       const data = await (account
         ? PostManager.getPaginatedPostsByOwner(account, NUM_POSTS_PER_CALL, viewedPostIds)
-        : PostManager.getPaginatedPosts(NUM_POSTS_PER_CALL, viewedPostIds));
+        : PostManager.getPaginatedPosts(
+            NUM_POSTS_PER_CALL,
+            viewedPostIds,
+            onlyNew && newestPost ? newestPost.createdAt / 1000 : 0 // get new posts only
+          ));
 
       const newPosts = data.map(getPostData);
 
@@ -163,18 +175,17 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
     }
   };
 
-  const getPosts = async (refresh = false) => {
+  const getPosts = async (newPosts = false) => {
     try {
       setLoading(true);
-      const posts = await fetchPosts();
+      const posts = await fetchPosts(newPosts);
 
       // save posts
       setPosts((prev) => {
-        if (refresh) {
-          return posts;
+        if (newPosts) {
+          return unionWith(posts, prev, isEqual);
         }
-        const result = unionWith(prev, posts, isEqual);
-        return result;
+        return unionWith(prev, posts, isEqual);
       });
 
       // save viewed posts
@@ -186,6 +197,16 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
         });
         return prev;
       });
+
+      setNewestPost((current) => {
+        let newest = current;
+        posts.forEach((post) => {
+          if (!newest || post.id > newest.id) {
+            newest = post;
+          }
+        });
+        return newest;
+      });
     } catch (error) {
       console.log(error);
       setAlert(error.message);
@@ -194,8 +215,13 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
     }
   };
 
-  const reloadPosts = async (refresh = false) => {
-    await Promise.all([getPostsLength(), getPosts(refresh)]);
+  const getNewPosts = async () => {
+    await Promise.all([getPostsLength(), getPosts(true)]);
+    setReload(false);
+  };
+
+  const reloadPosts = async () => {
+    await Promise.all([getPostsLength(), getPosts()]);
     setReload(false);
   };
 
@@ -224,7 +250,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost = false }) => {
                 color="secondary"
                 size="small"
                 onClick={() => {
-                  reloadPosts();
+                  getNewPosts();
                 }}
               >
                 Reload
