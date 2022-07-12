@@ -92,6 +92,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     address private _migrator;
     mapping(address => Profile) public profileByOwner;
+    mapping(uint256 => bool) public postIsFlagged;
 
     enum Action {
         Migrator,
@@ -139,8 +140,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     uint256 public oldWeightMultiplier;
     uint256 public weightThreshold;
     uint256 public initialWeight;
-
-    mapping(uint256 => bool) public postIsFlagged;
 
     modifier postExists(uint256 _postId) {
         require(postById[_postId].from != address(0), "Post does not exist");
