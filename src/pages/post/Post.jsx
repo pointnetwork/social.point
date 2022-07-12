@@ -1,6 +1,6 @@
-import Appbar from "../../components/topbar/Appbar";
-import { useRoute } from "wouter";
-import { useEffect, useState } from "react";
+import Appbar from '../../components/topbar/Appbar';
+import { useRoute } from 'wouter';
+import { useEffect, useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { makeStyles } from '@material-ui/core/styles';
 
@@ -11,7 +11,9 @@ import Backdrop from '@material-ui/core/Backdrop';
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert from '@material-ui/lab/Alert';
 
-import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
+import getPostData from '../../mappers/Post';
+
+import CircularProgressWithIcon from '../../components/generic/CircularProgressWithIcon';
 
 import Box from '@material-ui/core/Box';
 import Container from '@material-ui/core/Container';
@@ -24,141 +26,134 @@ import Typography from '@material-ui/core/Typography';
 import PostCard from '../../components/post/PostCard';
 
 function Alert(props) {
-    return <MuiAlert elevation={6} variant="filled" {...props} />;
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
 
 const useStyles = makeStyles((theme) => ({
-    backdrop: {
-        zIndex: theme.zIndex.drawer + 1,
-    },
-    container: {
-        padding: theme.spacing(2, 2),
-        display: "flex",
-        minHeight: "90vh",
-        flexDirection: "column",
-        justifyContent: "center"        
-    }
+  backdrop: {
+    zIndex: theme.zIndex.drawer + 1,
+  },
+  container: {
+    padding: theme.spacing(2, 2),
+    display: 'flex',
+    minHeight: '90vh',
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
 }));
 
 const Post = () => {
-    const [match, params] = useRoute("/post/:id");
-    const [loading, setLoading] = useState(true);
-    const [alert, setAlert] = useState("");
-    const [post, setPost] = useState();
-    
-    const { walletAddress, events } = useAppContext();
+  const [match, params] = useRoute('/post/:id');
+  const [loading, setLoading] = useState(true);
+  const [alert, setAlert] = useState('');
+  const [post, setPost] = useState();
 
-    const styles = useStyles();
-  
-    const handleAlert = (event, reason) => {
-        if (reason === 'clickaway') {
-          return;
-        }
-        setAlert("");
-    };   
-    
-    const getPost = async () => {
-      console.log("hola");
-        try {
-          const isPost = params.id.match(/^\d+$/);
-          let isFlagged = false;
+  const { walletAddress, events } = useAppContext();
 
-          if (isPost) {
-            const post = await PostManager.getPost(params.id);            
-            
-            try {
-              isFlagged = await PostManager.isFlaggedPost(params.id);
-            }
-            catch(error) {
-              console.warn(error);
-            }
+  const styles = useStyles();
 
-            if (post && (parseInt(post[4]) !== 0)) {
-                setPost({
-                    id: post[0],
-                    from: post[1],
-                    contents: post[2],
-                    image: post[3],
-                    createdAt: parseInt(post[4])*1000,
-                    likesCount: parseInt(post[5]),
-                    commentsCount: parseInt(post[6]),
-                    isFlagged
-                })
-            }
-          }
+  const handleAlert = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setAlert('');
+  };
+
+  const getPost = async () => {
+    try {
+      const isPost = params.id.match(/^\d+$/);
+
+      if (isPost) {
+        const post = getPostData(await PostManager.getPost(params.id));
+
+        if (post && post.createdAt !== 0) {
+          setPost(post);
         }
-        catch(error) {
-          setAlert(error.message);
-        }
-        finally {
-          setLoading(false);
-        }
+      }
+    } catch (error) {
+      setAlert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getPost();
+  }, []);
+
+  useEffect(() => {
+    getEvents();
+    return () => {
+      events.listeners['PointSocial']['StateChange'].removeListener('StateChange', handleEvents);
+      events.unsubscribe('PointSocial', 'StateChange');
     };
-    
-    useEffect(() => {
-        getPost();
-    }, []);
+  }, []);
 
-    useEffect(() => {
-        getEvents();
-        return () => {
-          events.listeners["PointSocial"]["StateChange"].removeListener("StateChange", handleEvents);
-          events.unsubscribe("PointSocial", "StateChange");
-        };
-      }, []);
-    
-      const getEvents = async() => {
-        try {
-          const ev = await events.subscribe("PointSocial", "StateChange");
-          ev.on("StateChange", handleEvents);
-        }
-        catch(error) {
-          console.log(error.message);
-        }
-      }
-    
-      const handleEvents = async(event) => {
-        if (event) {
-          //console.log(event.returnValues);
-        }
-      }
-    
-    
-    const main = (post)?
+  const getEvents = async () => {
+    try {
+      const ev = await events.subscribe('PointSocial', 'StateChange');
+      ev.on('StateChange', handleEvents);
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  const handleEvents = async (event) => {
+    if (event) {
+      //console.log(event.returnValues);
+    }
+  };
+
+  const main = post ? (
     <Container fixed={false} className={styles.container}>
-        <PostCard post={post} setUpperLoading={setLoading} setAlert={setAlert} startExpanded={true} singlePost={true}/>
+      <PostCard
+        post={post}
+        setUpperLoading={setLoading}
+        setAlert={setAlert}
+        startExpanded={true}
+        singlePost={true}
+      />
     </Container>
-    : 
+  ) : (
     <>
-        { !loading && 
-            <Box color="text.primary" display="flex" justifyContent="center" alignItems="center" height="90vh">
-                <div>
-                    <SearchOutlinedIcon style={{ fontSize: 120 }} />
-                    <Typography>Post not found</Typography>
-                </div>
-            </Box>
-        }                
+      {!loading && (
+        <Box
+          color="text.primary"
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          height="90vh"
+        >
+          <div>
+            <SearchOutlinedIcon style={{ fontSize: 120 }} />
+            <Typography>Post not found</Typography>
+          </div>
+        </Box>
+      )}
     </>
+  );
 
-    return (
-        <div style={{ padding: 0, margin: 0}}>
-            { walletAddress && <Appbar setAlert={setAlert} setLoading={setLoading}/> }
-            <Backdrop className={styles.backdrop} open={loading || !walletAddress}>
-                {
-                    walletAddress? 
-                    <CircularProgress color="inherit" />:
-                    <CircularProgressWithIcon icon={<AccountBalanceWalletOutlinedIcon/>} props={{color : 'inherit'}} />
-                }
-            </Backdrop>
-            {
-                walletAddress && main
-            }
-            <Snackbar open={!(alert === "")} autoHideDuration={6000} onClose={handleAlert}>
-                <Alert onClose={handleAlert} severity={alert.split("|")[1]||"error"}>{ alert.split("|")[0] }</Alert>
-            </Snackbar>
-        </div>
-    );
-}
+  return (
+    <div style={{ padding: 0, margin: 0 }}>
+      {walletAddress && <Appbar setAlert={setAlert} setLoading={setLoading} />}
+      <Backdrop className={styles.backdrop} open={loading || !walletAddress}>
+        {walletAddress ? (
+          <CircularProgress color="inherit" />
+        ) : (
+          <CircularProgressWithIcon
+            icon={<AccountBalanceWalletOutlinedIcon />}
+            props={{ color: 'inherit' }}
+          />
+        )}
+      </Backdrop>
+      {walletAddress && main}
+      <Snackbar open={!(alert === '')} autoHideDuration={6000} onClose={handleAlert}>
+        <Alert onClose={handleAlert} severity={alert.split('|')[1] || 'error'}>
+          {alert.split('|')[0]}
+        </Alert>
+      </Snackbar>
+    </div>
+  );
+};
 
-
-export default Post
+export default Post;
