@@ -69,7 +69,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 timestamp,
         uint256 likesWeightMultiplier,
         uint256 dislikesWeightWultiplier,
-        uint256 oldWeightMultiplier,
+        uint256 ageWeightMultiplier,
         uint256 initialWeight
     );
 
@@ -137,7 +137,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     uint256 public likesWeightMultiplier;
     uint256 public dislikesWeightWultiplier;
-    uint256 public oldWeightMultiplier;
+    uint256 public ageWeightMultiplier;
     uint256 public weightThreshold;
     uint256 public initialWeight;
 
@@ -160,13 +160,13 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function setWeights(
         uint256 _likesWeightMultiplier,
         uint256 _dislikesWeightWultiplier,
-        uint256 _oldWeightMultiplier,
+        uint256 _ageWeightMultiplier,
         uint256 _weightThreshold,
         uint256 _initialWeight
     ) external onlyDeployer {
         likesWeightMultiplier = _likesWeightMultiplier;
         dislikesWeightWultiplier = _dislikesWeightWultiplier;
-        oldWeightMultiplier = _oldWeightMultiplier;
+        ageWeightMultiplier = _ageWeightMultiplier;
         weightThreshold = _weightThreshold;
         initialWeight = _initialWeight;
 
@@ -175,7 +175,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             block.timestamp,
             likesWeightMultiplier,
             dislikesWeightWultiplier,
-            oldWeightMultiplier,
+            ageWeightMultiplier,
             initialWeight
         );
     }
@@ -331,19 +331,32 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return postsWithMetadata;
     }
 
+    /**
+     * @notice Validate that a post must be shown or not
+     * @dev Validate that a post must be shown or not
+     * @param _post - Post to be validated with metadata
+     * @param _postIdsToFilter - Already seen post ids
+     * @param _newerThanTimestamp - newest post seen timestamp
+     */
     function _validPostToBeShown(
         PostWithMetadata memory _post,
         uint256[] memory _postIdsToFilter,
         uint256 _newerThanTimestamp
     ) public view returns (bool) {
-        // not deleted posts
-        // posts with enough weight
-        // posts not viewed already
+        // Conditions:
+        // 1. CreatedAt must be different than 0
+        // 2. Weight must be equal or higher than weightThreshold (if set)
+        // 3. Post must not have been seen before (not include on post ids array)
+        // 4. Must be newer than timestamp (if set)
+        uint256 ageWeight = (block.timestamp - _post.createdAt) *
+            ageWeightMultiplier;
+
         return
             _post.createdAt != 0 &&
-            (weightThreshold == 0 || _post.weight >= int256(weightThreshold)) &&
+            (weightThreshold == 0 ||
+                (_post.weight + int256(ageWeight)) >=
+                int256(weightThreshold)) &&
             !_inArray(_post.id, _postIdsToFilter) &&
-            // get newest posts if timestamp is set
             (_newerThanTimestamp == 0 ||
                 _post.createdAt >= _newerThanTimestamp);
     }
@@ -454,7 +467,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 likesWeight = post.likesCount * likesWeightMultiplier;
         uint256 weightPunishment = (dislikesCount * dislikesWeightWultiplier) +
             (block.timestamp - post.createdAt) *
-            oldWeightMultiplier;
+            ageWeightMultiplier;
         int256 weight = int256(initialWeight) +
             int256(likesWeight) -
             int256(weightPunishment);
