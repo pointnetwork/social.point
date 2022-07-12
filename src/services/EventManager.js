@@ -11,9 +11,14 @@ class ContractEvents extends EventEmitter {
         this.event = event;
         try {
             this.interval = setInterval(async () => {
-                const ev = await this.event();
-                if (ev) {
-                    this.emit(ev.event, ev.returnValues);
+                try {
+                    const ev = await this.event();
+                    if (ev) {
+                        this.emit(ev.event, ev.returnValues);
+                    }    
+                }
+                catch(e) {
+                    console.warn(e.message);
                 }
             }, POLL_INTERVAL);
         }
