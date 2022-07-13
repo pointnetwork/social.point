@@ -6,7 +6,6 @@ import { useTheme } from '@material-ui/core/styles';
 import { makeStyles } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
 
-import Avatar from '@material-ui/core/Avatar';
 import Backdrop from '@material-ui/core/Backdrop';
 import Box from '@material-ui/core/Box';
 import Card from '@material-ui/core/Card';
@@ -35,6 +34,12 @@ import SaveOutlinedIcon from '@material-ui/icons/SaveOutlined';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import RoomOutlinedIcon from '@material-ui/icons/RoomOutlined';
 import PanoramaOutlinedIcon from '@material-ui/icons/PanoramaOutlined';
+import PersonAddIcon from '@material-ui/icons/PersonAdd';
+import BlockOutlinedIcon from '@material-ui/icons/BlockOutlined';
+import PersonAddDisabledIcon from '@material-ui/icons/PersonAddDisabled';
+import CheckOutlinedIcon from '@material-ui/icons/CheckOutlined';
+import LockOpenOutlinedIcon from '@material-ui/icons/LockOpenOutlined';
+import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 
 import TabPanel from '../tabs/TabPanel';
 import Feed from '../feed/Feed';
@@ -199,6 +204,13 @@ const useStyles = makeStyles((theme) => ({
     justify: "center",
     alignItems:"center"
   },
+  followBox: {
+    display: 'flex',
+    justifyContent: "end",
+    justify: "end",
+    alignItems:"end",
+    margin: theme.spacing(2)
+  }
 }));
 
 const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
@@ -211,11 +223,19 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   const [name, setName] = useState(EMPTY);
   const [location, setLocation] = useState(EMPTY);
   const [about, setAbout] = useState(EMPTY);
+
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
+  
   const [avatar, setAvatar] = useState(EMPTY);
   const [banner, setBanner] = useState(EMPTY);
   const [profile, setProfile] = useState();
+
+
+  const [isOwner, setIsOwner] = useState(false);
+  const [isFollowed, setFollowed] = useState(false);  
+  const [isFollower, setFollower] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -263,6 +283,10 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
 
   const loadProfile = async () => {
     try {
+      const owner = address.toLowerCase() === walletAddress.toLowerCase();
+      if (owner) {
+        setIsOwner(true);
+      }
       const profile = await UserManager.getProfile(address);
       if (profile) {
         setProfile({
@@ -274,7 +298,14 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
           followersCount: 0,
           followingCount: 0,
         });
-      }  
+      }
+      
+      if (!owner) {
+        setFollowed(await UserManager.isFollowing(walletAddress, address));
+        setFollower(await UserManager.isFollowing(address, walletAddress));
+        setIsBlocked(await UserManager.isBlocked(address, walletAddress));
+      }
+
     }
     catch(error) {
       setAlert(error.message);
@@ -301,6 +332,10 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
       default:
       case 'cancel':
         cancelEdit();
+      break;
+      case 'block':
+      case 'unblock':
+        toggleBlock();
       break;
     }
 
@@ -404,7 +439,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
         followingCount: 0,
       };
 
-      const result = await UserManager.setProfile(
+      await UserManager.setProfile(
         updatedProfile.displayName,
         updatedProfile.displayLocation, 
         updatedProfile.displayAbout, 
@@ -432,6 +467,50 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
     }
   };
  
+  const toggleFollow = async () => {
+    try {
+      setLoading(true);
+      if (isFollowed) {
+        await UserManager.unfollowUser(address);
+        setFollowed(false);
+        setAlert(`You're no longer following to ${name}|success`);
+      }
+      else {
+        await UserManager.followUser(address);
+        setFollowed(true);
+        setAlert(`Now you're following ${name}|success`);
+      }
+    }
+    catch(error) {
+      setAlert(error.message);
+    }
+    finally {
+      setLoading(false);
+    }
+  }
+
+  const toggleBlock = async () => {
+    try {
+      setLoading(true);
+      if (isBlocked) {
+        await UserManager.unblockUser(address);
+        setIsBlocked(false);
+        setAlert(`You unblocked all activity from${name}|success`);
+      }
+      else {
+        await UserManager.blockUser(address);
+        setIsBlocked(true);
+        setAlert(`You blocked all activity from ${name}|success`);
+      }
+    }
+    catch(error) {
+      setAlert(error.message);
+    }
+    finally {
+      setLoading(false);
+    }
+  }
+
   const bannerContent = 
   <Grid container spacing={0} style={{ height: '100%'}}>
     <Grid item xs={12}>
@@ -445,7 +524,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                   className={styles.actionIcon}>@{identity} { !sm && `• ${address}` }
                 </Typography>
               }/>
-          { (walletAddress === address) &&
+          {
             <Box style={{display:'flex', justifyContent:"right", width:'100%'}}>
               <IconButton aria-label="actions" 
                           aria-controls="actions-menu" 
@@ -463,7 +542,23 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                     transformOrigin={{ vertical: "top", horizontal: "right" }}
                     onClose={handleActionsClose}
                     open={actionsOpen}>
-                {!edit && 
+                {!isOwner && isBlocked &&
+                  <MenuItem onClick={(event) => handleAction('unblock')}>
+                    <ListItemIcon style={{margin: 0}}>
+                      <LockOpenOutlinedIcon fontSize="small" style={{margin: 0}}/>
+                    </ListItemIcon>
+                    <Typography variant="caption" align="left">Unblock</Typography>
+                  </MenuItem>
+                }
+                {!isOwner && !isBlocked &&
+                  <MenuItem onClick={(event) => handleAction('block')}>
+                    <ListItemIcon style={{margin: 0}}>
+                      <BlockOutlinedIcon fontSize="small" style={{margin: 0}}/>
+                    </ListItemIcon>
+                    <Typography variant="caption" align="left">Block</Typography>
+                  </MenuItem>
+                }
+                {!edit && isOwner &&
                   <MenuItem onClick={(event) => handleAction('edit')}>
                     <ListItemIcon style={{margin: 0}}>
                       <EditOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -471,7 +566,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                     <Typography variant="caption" align="left">Edit</Typography>
                   </MenuItem>
                 }
-                {edit && 
+                {edit && isOwner &&
                   <MenuItem onClick={(event) => handleAction('cancel')}>
                     <ListItemIcon style={{margin: 0}}>
                       <CancelOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -479,7 +574,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                     <Typography variant="caption" align="left">Cancel</Typography>
                   </MenuItem>
                 }
-                {edit && 
+                {edit && isOwner &&
                   <MenuItem onClick={(event) => handleAction('save')}>
                     <ListItemIcon style={{margin: 0}}>
                       <SaveOutlinedIcon fontSize="small" style={{margin: 0}}/>
@@ -524,6 +619,18 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
               <UserAvatar address={address} src={avatar} link={false} setAlert={setAlert} props={{className: styles.avatar}}/>
             </Fab>
           </Tooltip>
+          { !isOwner &&
+            <Box className={styles.followBox}>
+              {
+                isBlocked?
+                  <Chip color="secondary" clickable icon={isBlocked? <LockOpenOutlinedIcon /> : <LockOutlinedIcon />} label={isBlocked? "Unblock" : "Block"} onClick={toggleBlock}/>
+                :
+                  isFollower && <Chip icon={<CheckOutlinedIcon />} label="Follows you" color="primary"/> 
+              }              
+              <div style={{width:'100%'}}></div>
+              <Chip color="secondary" clickable icon={isFollowed? <PersonAddDisabledIcon /> : <PersonAddIcon />} label={isFollowed? "Unfollow" : "Follow"} onClick={toggleFollow}/>
+            </Box>
+          }
           { edit && <input ref={uploadAvatarRef} accept="image/*" type="file" hidden onChange={handleAvatarUpload} />}
           <CardContent>              
             <Grid container direction="column" justifyContent="space-between" alignItems="center">
