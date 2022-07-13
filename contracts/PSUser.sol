@@ -23,6 +23,34 @@ contract PSUser is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     mapping(address => Connections) private _connectionsByUser;
 
+    modifier onlyMutuals (address _user) {
+        require(isFollowing(msg.sender, _user), "ERROR_NOT_MUTUAL");
+        require(isFollowing(_user, msg.sender), "ERROR_NOT_MUTUAL");
+        _;
+    }
+
+    modifier onlyFollowers (address _user) {
+        require((msg.sender == _user) || isFollowing(msg.sender, _user), "ERROR_NOT_FOLLOWING");
+        _;
+    }
+
+    modifier notBlocked (address _user) {
+        require(!isBlocked(msg.sender, _user), "ERROR_USER_BLOCKED");
+        require(!isBlocked(_user, msg.sender), "ERROR_USER_BLOCKED");
+        _;
+    }
+
+    modifier onlyDeployer {
+        require(
+            IIdentity(_identityContractAddr).isIdentityDeployer(
+                _identityHandle,
+                msg.sender
+            ),
+            "ERROR_NOT_DEPLOYER"
+        );
+        _;
+    }
+
     function initialize(
         address identityContractAddr,
         string calldata identityHandle
@@ -33,17 +61,10 @@ contract PSUser is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _identityHandle = identityHandle;
     }
 
-    function _authorizeUpgrade(address) internal view override {
-        require(
-            IIdentity(_identityContractAddr).isIdentityDeployer(
-                _identityHandle,
-                msg.sender
-            ),
-            "You are not a deployer of this identity"
-        );
+    function _authorizeUpgrade(address) internal onlyDeployer view override {
     }
 
-    function followUser(address _user) public returns (bool) {
+    function followUser(address _user) public notBlocked(_user) returns (bool) {
         return
             EnumerableSet.add(_connectionsByUser[msg.sender].following, _user)
             &&
@@ -61,20 +82,26 @@ contract PSUser is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return EnumerableSet.contains(_connectionsByUser[_owner].following, _user);
     }
 
-    function getFollowing(address _user) public view returns (address[] memory) {
+    function followingList(address _user) public onlyFollowers(_user) view returns (address[] memory) {
         return EnumerableSet.values(_connectionsByUser[_user].following);
     }
 
-    function getFollowers(address _user) public view returns (address[] memory) {        
+    function followingCount(address _user) public view returns (uint256) {
+        return EnumerableSet.length(_connectionsByUser[_user].following);
+    }
+
+    function followersList(address _user) public onlyFollowers(_user) view returns (address[] memory) {        
         return EnumerableSet.values(_connectionsByUser[_user].followers);
     }
 
+    function followersCount(address _user) public view returns (uint256) {        
+        return EnumerableSet.length(_connectionsByUser[_user].followers);
+    }
+
     function blockUser(address _user) public returns (bool) {
+        EnumerableSet.remove(_connectionsByUser[msg.sender].following, _user);
+        EnumerableSet.remove(_connectionsByUser[_user].followers, msg.sender);
         return
-            EnumerableSet.remove(_connectionsByUser[msg.sender].following, _user)
-            &&
-            EnumerableSet.remove(_connectionsByUser[_user].followers, msg.sender)
-            &&
             EnumerableSet.add(_connectionsByUser[msg.sender].blocked, _user);
     }
 
@@ -85,4 +112,9 @@ contract PSUser is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function isBlocked(address _owner, address _user) public view returns (bool) {        
         return EnumerableSet.contains(_connectionsByUser[_owner].blocked, _user);
     }
+
+    function blockList() public view returns (address[] memory) {
+        return EnumerableSet.values(_connectionsByUser[msg.sender].blocked);
+    }
+
 }
