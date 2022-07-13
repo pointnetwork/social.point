@@ -44,6 +44,7 @@ import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import TabPanel from '../tabs/TabPanel';
 import Feed from '../feed/Feed';
 import UserAvatar from '../avatar/UserAvatar';
+import UserList from '../user/UserList';
 
 import point from "../../services/PointSDK";
 import UserManager from "../../services/UserManager";
@@ -226,7 +227,9 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
 
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
-  
+  const [followersList, setFollowersList] = useState([]);
+  const [followingList, setFollowingList] = useState([]);
+
   const [avatar, setAvatar] = useState(EMPTY);
   const [banner, setBanner] = useState(EMPTY);
   const [profile, setProfile] = useState();
@@ -269,10 +272,36 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
         setLocation(location);
         const about = (profile.displayLocation === EMPTY)? "Hey I'm using Point Social!" : await point.getString(profile.displayAbout, {  encoding: 'utf-8' });
         setAbout(about);
-        setFollowers(profile.followersCount || 0);
-        setFollowing(profile.followingCount || 0);
+        setFollowers(profile.followersCount || (await UserManager.followersCount(address)) || 0);
+        setFollowing(profile.followingCount || (await UserManager.followingCount(address)) || 0);
+        
         setAvatar(`/_storage/${profile.avatar}`);
         setBanner((profile.banner=== EMPTY)?defaultBanner:`/_storage/${profile.banner}`);
+
+        try {
+          setFollowersList(await UserManager.followersList(address));
+        }
+        catch(error) {
+          setFollowersList([]);
+        }
+
+        try {
+          setFollowingList(await UserManager.followingList(address));
+        }
+        catch(error) {
+          setFollowingList([]);
+        }
+
+        const owner = address.toLowerCase() === walletAddress.toLowerCase();
+        if (owner) {
+          setIsOwner(true);
+        }
+        else {
+          setFollowed(await UserManager.isFollowing(walletAddress, address));
+          setFollower(await UserManager.isFollowing(address, walletAddress));
+          setIsBlocked(await UserManager.isBlocked(walletAddress, address));
+        }
+
         setLoading(false);
       }
       catch(error) {
@@ -283,10 +312,6 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
 
   const loadProfile = async () => {
     try {
-      const owner = address.toLowerCase() === walletAddress.toLowerCase();
-      if (owner) {
-        setIsOwner(true);
-      }
       const profile = await UserManager.getProfile(address);
       if (profile) {
         setProfile({
@@ -299,13 +324,6 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
           followingCount: 0,
         });
       }
-      
-      if (!owner) {
-        setFollowed(await UserManager.isFollowing(walletAddress, address));
-        setFollower(await UserManager.isFollowing(address, walletAddress));
-        setIsBlocked(await UserManager.isBlocked(address, walletAddress));
-      }
-
     }
     catch(error) {
       setAlert(error.message);
@@ -495,7 +513,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
       if (isBlocked) {
         await UserManager.unblockUser(address);
         setIsBlocked(false);
-        setAlert(`You unblocked all activity from${name}|success`);
+        setAlert(`You unblocked all activity from ${name}|success`);
       }
       else {
         await UserManager.blockUser(address);
@@ -619,7 +637,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
               <UserAvatar address={address} src={avatar} link={false} setAlert={setAlert} props={{className: styles.avatar}}/>
             </Fab>
           </Tooltip>
-          { !isOwner &&
+          { !loading && !isOwner &&
             <Box className={styles.followBox}>
               {
                 isBlocked?
@@ -628,7 +646,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                   isFollower && <Chip icon={<CheckOutlinedIcon />} label="Follows you" color="primary"/> 
               }              
               <div style={{width:'100%'}}></div>
-              <Chip color="secondary" clickable icon={isFollowed? <PersonAddDisabledIcon /> : <PersonAddIcon />} label={isFollowed? "Unfollow" : "Follow"} onClick={toggleFollow}/>
+              { !isBlocked && <Chip color="secondary" clickable icon={isFollowed? <PersonAddDisabledIcon /> : <PersonAddIcon />} label={isFollowed? "Unfollow" : "Follow"} onClick={toggleFollow}/> }
             </Box>
           }
           { edit && <input ref={uploadAvatarRef} accept="image/*" type="file" hidden onChange={handleAvatarUpload} />}
@@ -686,7 +704,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
             </Grid>
           </CardContent>
           <Divider />
-          {/* Temporarily disabling until functionality is available
+          {
           <Box display={'flex'}>
             <Box p={2} flex={'auto'} className={styles.statBox}>
               <p className={styles.statLabel}>Followers</p>
@@ -700,14 +718,18 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                 {loading ? <Skeleton style={{ width: '100px' }}/> : following }
               </p>
             </Box>
-            </Box>*/}
+            </Box>}
           <Tabs value={tabIndex} onChange={handleTabChange} indicatorColor="primary" textColor="primary" centered>
             <Tab label="Posts" />
+            <Tab label="Followers" disabled={!isFollowed}/>
+            <Tab label="Following" disabled={!isFollowed}/>
             {/* Temporarily disabling until functionality is available
             <Tab label="Likes" disabled/>
             <Tab label="Comments" disabled/>*/}
           </Tabs>
           <TabPanel value={tabIndex} index={0} children={<Feed account={address}/>}/>
+          <TabPanel value={tabIndex} index={1} children={<UserList users={followersList}/>}/>
+          <TabPanel value={tabIndex} index={2} children={<UserList users={followingList}/>}/>
         </Card>
       </div>
     </>

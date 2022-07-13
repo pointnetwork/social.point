@@ -9,6 +9,12 @@ class UserManager {
     static blockUser = async (user) => point.contractCall("PSUser", "blockUser", [user]);
     static unblockUser = async (user) => point.contractCall("PSUser", "unBlockUser", [user]);
     static isBlocked = async (owner, user) => point.contractCall("PSUser", "isBlocked", [owner, user]);
+    static blockList = async () => point.contractCall("PSUser", "blockList", []);
+    static followingList = async (user) => point.contractCall("PSUser", "followingList", [user]);
+    static followersList = async (user) => point.contractCall("PSUser", "followersList", [user]);
+    static followingCount = async (user) => point.contractCall("PSUser", "followingCount", [user]);
+    static followersCount = async (user) => point.contractCall("PSUser", "followersCount", [user]);
+
 }
 
 export default UserManager
