@@ -3,7 +3,8 @@
     "target": "social.point",
     "keyvalue": {},
     "contracts": [
-      "PointSocial"
+      "PointSocial",
+      "PSUser"
     ],
     "upgradable": true,
     "rootDir": "public"
