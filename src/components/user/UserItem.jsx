@@ -26,8 +26,6 @@ const UserItem = ({address}) => {
     const [name, setName] = useState('');
     const [about, setAbout] = useState('');
 
-
-
     const { walletAddress, profile, identity } = useAppContext();
 
     useEffect(() => {
@@ -58,7 +56,7 @@ const UserItem = ({address}) => {
         <>
             <ListItem alignItems="flex-start">
                 <ListItemAvatar>
-                    <UserAvatar address={address}/>
+                    <UserAvatar address={address} link={false} props={{ onClick: () =>  window.open(`/profile/${address}`, "_blank") }}/>
                 </ListItemAvatar>
                 <ListItemText primary={name} secondary={about}/>
             </ListItem>

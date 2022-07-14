@@ -49,6 +49,8 @@ import UserList from '../user/UserList';
 import point from "../../services/PointSDK";
 import UserManager from "../../services/UserManager";
 
+import EventConstants from "../../events";
+
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const EMPTY = '0x0000000000000000000000000000000000000000000000000000000000000000';
                
@@ -234,11 +236,11 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   const [banner, setBanner] = useState(EMPTY);
   const [profile, setProfile] = useState();
 
-
   const [isOwner, setIsOwner] = useState(false);
   const [isFollowed, setFollowed] = useState(false);  
   const [isFollower, setFollower] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [imBlocked, setImBlocked] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -252,7 +254,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   const displayAboutRef = useRef();
   const actionsAnchor = useRef();
 
-  const { walletAddress, setUserProfile } = useAppContext();
+  const { walletAddress, setUserProfile, events } = useAppContext();
 
   useEffect(() => {
     loadProfile();
@@ -261,6 +263,42 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   useEffect(() => {
     renderProfile(profile);
   }, [profile]);
+
+  useEffect(() => {
+    getEvents();
+    return () => {
+      events.listeners["PSUser"]["FollowEvent"].removeListener("FollowEvent", handleEvents, { type: 'profile', id: address});
+      events.unsubscribe("PSUser", "FollowEvent");
+    };
+  }, []);
+
+  const getEvents = async() => {
+    try {
+      (await events.subscribe("PSUser", "FollowEvent")).on("FollowEvent", handleEvents, { type: 'profile', id: address});
+    }
+    catch(error) {
+      console.log(error.message);
+    }
+  }
+
+  const handleEvents = async(event) => {
+    console.log(event);
+    if (event && (((event.from.toLowerCase() === walletAddress.toLowerCase()) &&
+       (event.to.toLowerCase() === address.toLowerCase())) ||
+       ((event.to.toLowerCase() === walletAddress.toLowerCase()) &&
+       (event.from.toLowerCase() === address.toLowerCase())))) {  
+          switch(event.action) {
+            case EventConstants.FollowAction.Follow:
+            case EventConstants.FollowAction.UnFollow:
+            case EventConstants.FollowAction.Block:
+            case EventConstants.FollowAction.UnBlock:
+              await loadFollowStatus();            
+            break;
+            default:
+            break;
+          }
+    }
+  }
 
   const renderProfile = async (profile) => {
     if (profile) {
@@ -271,42 +309,45 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
         const location = (profile.displayLocation === EMPTY)? "Point Network" : await point.getString(profile.displayLocation, {  encoding: 'utf-8' });
         setLocation(location);
         const about = (profile.displayLocation === EMPTY)? "Hey I'm using Point Social!" : await point.getString(profile.displayAbout, {  encoding: 'utf-8' });
-        setAbout(about);
-        setFollowers(profile.followersCount || (await UserManager.followersCount(address)) || 0);
-        setFollowing(profile.followingCount || (await UserManager.followingCount(address)) || 0);
-        
+        setAbout(about);        
         setAvatar(`/_storage/${profile.avatar}`);
         setBanner((profile.banner=== EMPTY)?defaultBanner:`/_storage/${profile.banner}`);
-
-        try {
-          setFollowersList(await UserManager.followersList(address));
-        }
-        catch(error) {
-          setFollowersList([]);
-        }
-
-        try {
-          setFollowingList(await UserManager.followingList(address));
-        }
-        catch(error) {
-          setFollowingList([]);
-        }
-
-        const owner = address.toLowerCase() === walletAddress.toLowerCase();
-        if (owner) {
-          setIsOwner(true);
-        }
-        else {
-          setFollowed(await UserManager.isFollowing(walletAddress, address));
-          setFollower(await UserManager.isFollowing(address, walletAddress));
-          setIsBlocked(await UserManager.isBlocked(walletAddress, address));
-        }
-
+        await loadFollowStatus();
         setLoading(false);
       }
       catch(error) {
         setAlert(error.message);
       }
+    }
+  }
+
+  const loadFollowStatus = async () => {
+    setFollowers(await UserManager.followersCount(address) || 0);
+    setFollowing(await UserManager.followingCount(address) || 0);
+
+    try {
+      setFollowersList(await UserManager.followersList(address));
+    }
+    catch(error) {
+      setFollowersList([]);
+    }
+
+    try {
+      setFollowingList(await UserManager.followingList(address));
+    }
+    catch(error) {
+      setFollowingList([]);
+    }
+
+    const owner = address.toLowerCase() === walletAddress.toLowerCase();
+    if (owner) {
+      setIsOwner(true);
+    }
+    else {
+      setFollowed(await UserManager.isFollowing(walletAddress, address));
+      setFollower(await UserManager.isFollowing(address, walletAddress));
+      setIsBlocked(await UserManager.isBlocked(walletAddress, address));
+      setImBlocked(await UserManager.isBlocked(address, walletAddress));
     }
   }
 
@@ -643,10 +684,13 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                 isBlocked?
                   <Chip color="secondary" clickable icon={isBlocked? <LockOpenOutlinedIcon /> : <LockOutlinedIcon />} label={isBlocked? "Unblock" : "Block"} onClick={toggleBlock}/>
                 :
-                  isFollower && <Chip icon={<CheckOutlinedIcon />} label="Follows you" color="primary"/> 
+                  imBlocked?
+                      <Chip icon={<BlockOutlinedIcon />} label="Blocked you" color="secondary"/>
+                    :
+                      isFollower && <Chip icon={<CheckOutlinedIcon />} label="Follows you" color="primary"/> 
               }              
               <div style={{width:'100%'}}></div>
-              { !isBlocked && <Chip color="secondary" clickable icon={isFollowed? <PersonAddDisabledIcon /> : <PersonAddIcon />} label={isFollowed? "Unfollow" : "Follow"} onClick={toggleFollow}/> }
+              { !(isBlocked || imBlocked) && <Chip color="secondary" clickable icon={isFollowed? <PersonAddDisabledIcon /> : <PersonAddIcon />} label={isFollowed? "Unfollow" : "Follow"} onClick={toggleFollow}/> }
             </Box>
           }
           { edit && <input ref={uploadAvatarRef} accept="image/*" type="file" hidden onChange={handleAvatarUpload} />}
@@ -721,8 +765,8 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
             </Box>}
           <Tabs value={tabIndex} onChange={handleTabChange} indicatorColor="primary" textColor="primary" centered>
             <Tab label="Posts" />
-            <Tab label="Followers" disabled={!isFollowed}/>
-            <Tab label="Following" disabled={!isFollowed}/>
+            <Tab label="Followers" disabled={!isFollowed && !isOwner}/>
+            <Tab label="Following" disabled={!isFollowed && !isOwner}/>
             {/* Temporarily disabling until functionality is available
             <Tab label="Likes" disabled/>
             <Tab label="Comments" disabled/>*/}
