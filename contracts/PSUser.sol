@@ -51,6 +51,15 @@ contract PSUser is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
 
+    enum FollowAction {
+        Follow,
+        UnFollow,
+        Block,
+        UnBlock
+    }
+
+    event FollowEvent(address indexed from, address indexed to, FollowAction action);
+
     function initialize(
         address identityContractAddr,
         string calldata identityHandle
@@ -65,17 +74,22 @@ contract PSUser is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function followUser(address _user) public notBlocked(_user) returns (bool) {
-        return
+        bool result =
             EnumerableSet.add(_connectionsByUser[msg.sender].following, _user)
             &&
             EnumerableSet.add(_connectionsByUser[_user].followers, msg.sender);
+
+        emit FollowEvent(msg.sender, _user, FollowAction.Follow);
+        return result;
     }
 
     function unfollowUser(address _user) public returns (bool) { 
-        return
+        bool result =
             EnumerableSet.remove(_connectionsByUser[msg.sender].following, _user)
             &&
             EnumerableSet.remove(_connectionsByUser[_user].followers, msg.sender);
+        emit FollowEvent(msg.sender, _user, FollowAction.UnFollow);
+        return result;
     }
 
     function isFollowing(address _owner, address _user) public view returns (bool) {   
@@ -100,13 +114,20 @@ contract PSUser is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     function blockUser(address _user) public returns (bool) {
         EnumerableSet.remove(_connectionsByUser[msg.sender].following, _user);
+        EnumerableSet.remove(_connectionsByUser[msg.sender].followers, _user);
+        EnumerableSet.remove(_connectionsByUser[_user].following, msg.sender);
         EnumerableSet.remove(_connectionsByUser[_user].followers, msg.sender);
-        return
+        bool result =
             EnumerableSet.add(_connectionsByUser[msg.sender].blocked, _user);
+        emit FollowEvent(msg.sender, _user, FollowAction.Block);
+        return result;
     }
 
     function unBlockUser(address _user) public returns (bool)  {
-        return EnumerableSet.remove(_connectionsByUser[msg.sender].blocked, _user);
+        bool result =
+        EnumerableSet.remove(_connectionsByUser[msg.sender].blocked, _user);
+        emit FollowEvent(msg.sender, _user, FollowAction.UnBlock);
+        return result;
     }
 
     function isBlocked(address _owner, address _user) public view returns (bool) {        
