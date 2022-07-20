@@ -3,14 +3,18 @@ pragma solidity >=0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "point-contract-manager/contracts/IIdentity.sol";
 
-contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract SocialStorage {
+
     using Counters for Counters.Counter;
+
     Counters.Counter internal _postIds;
     Counters.Counter internal _commentIds;
     Counters.Counter internal _likeIds;
@@ -70,11 +74,12 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 likesWeightMultiplier,
         uint256 dislikesWeightWultiplier,
         uint256 ageWeightMultiplier,
-        uint256 initialWeight
+        uint256 initialWeight,
+        uint256 followWeight
     );
 
-    address private _identityContractAddr;
-    string private _identityHandle;
+    address internal _identityContractAddr;
+    string internal _identityHandle;
 
     // posts
     uint256[] public postIds;
@@ -90,7 +95,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(uint256 => uint256[]) public likeIdsByPost;
     mapping(uint256 => Like) public likeById;
 
-    address private _migrator;
+    address internal _migrator;
     mapping(address => Profile) public profileByOwner;
     mapping(uint256 => bool) public postIsFlagged;
 
@@ -116,8 +121,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     Counters.Counter internal _dislikeIds;
     mapping(uint256 => uint256[]) public dislikeIdsByPost;
     mapping(address => uint256[]) public dislikeIdsByUser;
-    mapping(address => mapping(uint256 => uint256))
-        public dislikeIdByUserAndPost;
+    mapping(address => mapping(uint256 => uint256)) public dislikeIdByUserAndPost;
     mapping(uint256 => Dislike) public dislikeById;
 
     struct PostWithMetadata {
@@ -140,44 +144,56 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     uint256 public ageWeightMultiplier;
     uint256 public weightThreshold;
     uint256 public initialWeight;
+    uint256 public followWeight;
+
+    //mapping(bytes32 => address) internal _contractExtensions;
+    /*
+     * Follow layout storage
+     */
+    using EnumerableSet for EnumerableSet.AddressSet;
+
+    struct FollowConnections {
+        EnumerableSet.AddressSet following;
+        EnumerableSet.AddressSet followers;
+        EnumerableSet.AddressSet blocked;
+    }
+
+    mapping(address => FollowConnections) internal _followConnectionsByUser;
+
+    enum FollowAction {
+        Follow,
+        UnFollow,
+        Block,
+        UnBlock
+    }
+
+    event FollowEvent(
+        address indexed from, 
+        address indexed to, 
+        FollowAction action);
+
+}
+
+contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable, SocialStorage  {
+    using Counters for Counters.Counter;
 
     modifier postExists(uint256 _postId) {
-        require(postById[_postId].from != address(0), "Post does not exist");
+        require(postById[_postId].from != address(0), "ERROR_POST_DOES_NOT_EXISTS");
         _;
     }
 
     modifier onlyDeployer() {
-        require(
-            IIdentity(_identityContractAddr).isIdentityDeployer(
-                _identityHandle,
-                msg.sender
-            ),
-            "Not a deployer"
+        require(IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender),
+            "ERROR_NOT_DEPLOYER"
         );
         _;
     }
 
-    function setWeights(
-        uint256 _likesWeightMultiplier,
-        uint256 _dislikesWeightWultiplier,
-        uint256 _ageWeightMultiplier,
-        uint256 _weightThreshold,
-        uint256 _initialWeight
-    ) external onlyDeployer {
-        likesWeightMultiplier = _likesWeightMultiplier;
-        dislikesWeightWultiplier = _dislikesWeightWultiplier;
-        ageWeightMultiplier = _ageWeightMultiplier;
-        weightThreshold = _weightThreshold;
-        initialWeight = _initialWeight;
-
-        emit MultipliersChanged(
-            msg.sender,
-            block.timestamp,
-            likesWeightMultiplier,
-            dislikesWeightWultiplier,
-            ageWeightMultiplier,
-            initialWeight
-        );
+    modifier isContract(address _contract) {
+        uint size;
+        assembly { size := extcodesize(_contract) }
+        require(size > 0, "ERROR_NO_CONTRACT");
+        _;
     }
 
     function initialize(
@@ -188,6 +204,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         __UUPSUpgradeable_init();
         _identityContractAddr = identityContractAddr;
         _identityHandle = identityHandle;
+    //    _contractExtensions["PSFollow"] = address(new PSFollow());
     }
 
     function _authorizeUpgrade(address) internal view override onlyDeployer {}
@@ -210,6 +227,32 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
                 _identityHandle,
                 msg.sender
             );
+    }
+
+    function setWeights(
+        uint256 _likesWeightMultiplier,
+        uint256 _dislikesWeightWultiplier,
+        uint256 _ageWeightMultiplier,
+        uint256 _weightThreshold,
+        uint256 _initialWeight,
+        uint256 _followWeight
+    ) external onlyDeployer {
+        likesWeightMultiplier = _likesWeightMultiplier;
+        dislikesWeightWultiplier = _dislikesWeightWultiplier;
+        ageWeightMultiplier = _ageWeightMultiplier;
+        weightThreshold = _weightThreshold;
+        initialWeight = _initialWeight;
+        followWeight = _followWeight;
+
+        emit MultipliersChanged(
+            msg.sender,
+            block.timestamp,
+            likesWeightMultiplier,
+            dislikesWeightWultiplier,
+            ageWeightMultiplier,
+            initialWeight,
+            followWeight
+        );
     }
 
     // Post data functions
@@ -242,8 +285,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 postId,
         bytes32 contents,
         bytes32 image
-    ) external {
-        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+    ) external postExists(postId) {
         require(
             msg.sender == postById[postId].from,
             "ERROR_CANNOT_EDIT_OTHERS_POSTS"
@@ -261,8 +303,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function deletePost(uint256 postId) external {
-        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+    function deletePost(uint256 postId) external postExists(postId) {
         require(
             msg.sender == postById[postId].from,
             "ERROR_CANNOT_DELETE_OTHERS_POSTS"
@@ -300,18 +341,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return false;
     }
 
-    function flagPost(uint256 postId) external {
-        require(
-            IIdentity(_identityContractAddr).isIdentityDeployer(
-                _identityHandle,
-                msg.sender
-            ),
-            "ERROR_PERMISSION_DENIED"
-        );
-        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
-
+    function flagPost(uint256 postId) external postExists(postId) onlyDeployer {
         postIsFlagged[postId] = !postIsFlagged[postId];
-
         emit StateChange(
             postId,
             msg.sender,
@@ -380,8 +411,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             }
 
             PostWithMetadata memory _post = _getPostWithMetadata(_ids[i - 1]);
+            bool _blocked = isBlocked(msg.sender, _post.from) || isBlocked(_post.from, msg.sender);
 
-            if (_validPostToBeShown(_post, _idsToFilter, _newerThanTimestamp)) {
+            if (!_blocked && _validPostToBeShown(_post, _idsToFilter, _newerThanTimestamp)) {
                 _filteredArray[insertedLength] = _post;
                 unchecked {
                     insertedLength++;
@@ -434,13 +466,18 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         view
         returns (PostWithMetadata[] memory)
     {
-        return
-            _filterPosts(
-                postIdsByOwner[owner],
-                _viewedPostsIds,
-                postIdsByOwner[owner].length,
-                0
-            );
+        if (isBlocked(msg.sender, owner) || isBlocked(owner, msg.sender)) {
+            return new PostWithMetadata[](0);
+        }
+        else {
+            return
+                _filterPosts(
+                    postIdsByOwner[owner],
+                    _viewedPostsIds,
+                    postIdsByOwner[owner].length,
+                    0
+                );
+        }
     }
 
     function getAllPostsByOwnerLength(address owner)
@@ -468,9 +505,11 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 weightPunishment = (dislikesCount * dislikesWeightWultiplier) +
             (block.timestamp - post.createdAt) *
             ageWeightMultiplier;
+        uint256 follow = isFollowing(msg.sender, post.from)? followWeight : 0;
+
         int256 weight = int256(initialWeight) +
             int256(likesWeight) -
-            int256(weightPunishment);
+            int256(weightPunishment) + int256(follow);
 
         PostWithMetadata memory postWithMetadata = PostWithMetadata(
             post.id,
@@ -515,7 +554,6 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return _getPostWithMetadata(id);
     }
 
-    // Example: 1,"0x0000000000000000000000000000000000000000000068692066726f6d20706e"
     function addCommentToPost(uint256 postId, bytes32 contents) external {
         _commentIds.increment();
         uint256 newCommentId = _commentIds.current();
@@ -790,6 +828,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return false;
     }
 
+    /**********************************************************************
+    * User Profile Functions
+    ***********************************************************************/
+
     function setProfile(
         bytes32 name_,
         bytes32 location_,
@@ -809,7 +851,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return profileByOwner[id_];
     }
 
-    // Data Migrator Functions - only callable by _migrator
+    /**********************************************************************
+    * Data Migrator Functions - only callable by _migrator
+    ***********************************************************************/
 
     function add(
         uint256 id,
@@ -894,4 +938,81 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         emit ProfileChange(user, block.timestamp);
     }
+
+    /**********************************************************************
+    * Follow functions
+    ***********************************************************************/
+
+    modifier onlyMutuals (address _user) {
+        require(isFollowing(msg.sender, _user), "ERROR_NOT_MUTUAL");
+        require(isFollowing(_user, msg.sender), "ERROR_NOT_MUTUAL");
+        _;
+    }
+
+    modifier onlyFollowers (address _user) {
+        require((msg.sender == _user) || isFollowing(msg.sender, _user), "ERROR_NOT_FOLLOWING");
+        _;
+    }
+
+    modifier notBlocked (address _user) {
+        require(!isBlocked(msg.sender, _user), "ERROR_USER_BLOCKED");
+        require(!isBlocked(_user, msg.sender), "ERROR_USER_BLOCKED");
+        _;
+    }
+
+    function followUser(address _user) public notBlocked(_user) {
+        EnumerableSet.add(_followConnectionsByUser[msg.sender].following, _user);
+        EnumerableSet.add(_followConnectionsByUser[_user].followers, msg.sender);
+        emit FollowEvent(msg.sender, _user, FollowAction.Follow);
+    }
+
+    function unfollowUser(address _user) public { 
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].following, _user);
+        EnumerableSet.remove(_followConnectionsByUser[_user].followers, msg.sender);
+        emit FollowEvent(msg.sender, _user, FollowAction.UnFollow);
+    }
+
+    function isFollowing(address _owner, address _user) public view returns (bool) {   
+        return EnumerableSet.contains(_followConnectionsByUser[_owner].following, _user);
+    }
+
+    function followingList(address _user) public onlyFollowers(_user) view returns (address[] memory) {
+        return EnumerableSet.values(_followConnectionsByUser[_user].following);
+    }
+
+    function followingCount(address _user) public view returns (uint256) {
+        return EnumerableSet.length(_followConnectionsByUser[_user].following);
+    }
+
+    function followersList(address _user) public onlyFollowers(_user) view returns (address[] memory) {        
+        return EnumerableSet.values(_followConnectionsByUser[_user].followers);
+    }
+
+    function followersCount(address _user) public view returns (uint256) {        
+        return EnumerableSet.length(_followConnectionsByUser[_user].followers);
+    }
+
+    function blockUser(address _user) public {
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].following, _user);
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].followers, _user);
+        EnumerableSet.remove(_followConnectionsByUser[_user].following, msg.sender);
+        EnumerableSet.remove(_followConnectionsByUser[_user].followers, msg.sender);
+        EnumerableSet.add(_followConnectionsByUser[msg.sender].blocked, _user);
+        emit FollowEvent(msg.sender, _user, FollowAction.Block);
+    }
+
+    function unBlockUser(address _user) public {
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].blocked, _user);
+        emit FollowEvent(msg.sender, _user, FollowAction.UnBlock);
+    }
+
+    function isBlocked(address _owner, address _user) public view returns (bool) {        
+        return EnumerableSet.contains(_followConnectionsByUser[_owner].blocked, _user);
+    }
+
+    function blockList() public view returns (address[] memory) {
+        return EnumerableSet.values(_followConnectionsByUser[msg.sender].blocked);
+    }
+
+
 }

@@ -267,14 +267,14 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   useEffect(() => {
     getEvents();
     return () => {
-      events.listeners["PSUser"]["FollowEvent"].removeListener("FollowEvent", handleEvents, { type: 'profile', id: address});
-      events.unsubscribe("PSUser", "FollowEvent");
+      events.listeners["PointSocial"]["FollowEvent"].removeListener("FollowEvent", handleEvents, { type: 'profile', id: address});
+      events.unsubscribe("PointSocial", "FollowEvent");
     };
   }, []);
 
   const getEvents = async() => {
     try {
-      (await events.subscribe("PSUser", "FollowEvent")).on("FollowEvent", handleEvents, { type: 'profile', id: address});
+      (await events.subscribe("PointSocial", "FollowEvent")).on("FollowEvent", handleEvents, { type: 'profile', id: address});
     }
     catch(error) {
       console.log(error.message);
