@@ -11,6 +11,7 @@ import ThumbDownOutlinedIcon from '@material-ui/icons/ThumbDownOutlined';
 import { Link } from "wouter";
 
 import RichTextField from '../generic/RichTextField';
+import TextContent from '../generic/TextContent';
 import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
 
 import CancelOutlinedIcon from '@material-ui/icons/CancelOutlined';
@@ -633,8 +634,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                         ?
                             loading ? <Skeleton width="100%" height="100%"/> : <RichTextField ref={inputRef} value={content}/>
                         : 
-                            <Typography variant="body1" component="p">{ loading ? <Skeleton width="100%" height="100%"/> : (content !== EMPTY) && content }
-                            </Typography>
+                            loading ? <Skeleton width="100%" height="100%"/> :  (content !== EMPTY) && <TextContent content={content}/>
                     }
                     </CardContent>
                     { loading
