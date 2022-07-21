@@ -310,15 +310,15 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     function _getPostWithMetadata(uint256 _postId) internal view returns (PostWithMetadata memory) {
         Post memory post = postById[_postId];
         PostWithMetadata memory postWithMetadata = PostWithMetadata(
-            post.id,
+            _postId,
             post.from,
             post.contents,
             post.image,
             post.createdAt,
             post.likesCount,
             post.commentsCount,
-            getPostDislikesQty(post.id),
-            checkLikeToPost(post.id),
+            getPostDislikesQty(_postId),
+            checkLikeToPost(_postId),
             checkDislikeToPost(_postId)
         );
         return postWithMetadata;
