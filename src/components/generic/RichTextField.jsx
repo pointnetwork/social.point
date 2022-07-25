@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, forwardRef } from "react";
+import { useAppContext } from '../../context/AppContext';
 import { makeStyles } from '@material-ui/core/styles';
 import { TextField, InputAdornment, Popper } from '@material-ui/core';
 import EmojiEmotionsOutlinedIcon from '@material-ui/icons/EmojiEmotionsOutlined';
@@ -19,9 +20,10 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-const RichTextField = forwardRef(({value, minLength, maxLength, placeholder}, ref) => {
+const RichTextField = forwardRef(({value, minLength, maxLength, placeholder, disabled}, ref) => {
     const styles = useStyles();
     const anchorRef = useRef();
+    const { processing } = useAppContext();
 
     const [emoji, setEmoji] = useState(false);
     
@@ -71,6 +73,7 @@ const RichTextField = forwardRef(({value, minLength, maxLength, placeholder}, re
                 placeholder={placeholder || ''}
                 onFocus={(event) => event.target.selectionStart = event.target.value.length}
                 autoFocus
+                disabled={processing}
             />
             <Popper open={emoji} anchorEl={anchorRef.current}>
                 <div>

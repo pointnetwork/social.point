@@ -102,7 +102,7 @@ const ShareCard = ({ setAlert }) => {
 
     const [loading, setLoading] = useState(false);
     const [expanded, setExpanded] = useState(false);
-    const { walletAddress, profile, identity } = useAppContext();
+    const { walletAddress, profile, identity, processing, setProcessing } = useAppContext();
 
     const styles = useStyles();
     const inputRef = useRef();
@@ -127,6 +127,7 @@ const ShareCard = ({ setAlert }) => {
                 return;
             }
 
+            setProcessing(true);
             setLoading(true);
             const storageId = (content)? await point.putString(content): EMPTY;
             const imageId = (media)? await saveFile(media): EMPTY;
@@ -140,6 +141,7 @@ const ShareCard = ({ setAlert }) => {
         }
         finally {
             setLoading(false);
+            setProcessing(false);
         }
     }
 
@@ -157,10 +159,10 @@ const ShareCard = ({ setAlert }) => {
                 <Box p={1} className={styles.shareBox}>
                     <UserAvatar address={walletAddress} upperLoading={false} setAlert={setAlert} link={false} props={{className:styles.avatar}}/>
                     <RichTextField ref={inputRef} value="" placeholder={`What's on your mind ${profile && profile.displayName || identity}?`}/>
-                    <IconButton aria-label="attach" ml={3} onClick={toggleExpanded}>
+                    <IconButton aria-label="attach" ml={3} onClick={toggleExpanded} disabled={processing}>
                         <AddPhotoAlternateOutlinedIcon/>
                     </IconButton>
-                    <IconButton aria-label="share" ml={3} onClick={sharePost}>
+                    <IconButton aria-label="share" ml={3} onClick={sharePost} disabled={processing}>
                         <SendOutlinedIcon color="secondary"/>
                     </IconButton>
                 </Box>

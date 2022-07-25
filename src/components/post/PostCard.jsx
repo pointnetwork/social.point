@@ -156,7 +156,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
     const gutterStyles = usePushingGutterStyles({ space: 1, firstExcluded: false });
     const iconLabelStyles = useLabelIconStyles({ linked: true });
     
-    const { walletAddress, deployer, profile, identity, goHome, events} = useAppContext();
+    const { walletAddress, deployer, profile, identity, processing, setProcessing, goHome, events} = useAppContext();
 
     const [name, setName] = useState();
 
@@ -340,6 +340,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
 
     const deletePost = async () => {
         try {
+            setProcessing(true);
             setLoading(true);
             await PostManager.deletePost(post.id);
             if (singlePost) {
@@ -348,7 +349,10 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
         }
         catch(error) {
             setAlert(error.message);
-            setLoading(false);
+            setLoading(false);            
+        }        
+        finally {
+            setProcessing(false);
         }
     };
 
@@ -366,6 +370,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
             const newContent = (inputRef.current.value.trim())? inputRef.current.value.trim() : "";
             const newMedia = mediaRef.current.media();
 
+            setProcessing(true);
             setEdit(false);
             setLoading(true);
 
@@ -410,11 +415,13 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
         }
         finally {
             setLoading(false);
+            setProcessing(false);
         }
     };
 
     const flagPost = async () => {
         try {
+            setProcessing(true);
             showPromptFlag(false);
             setLoading(true);
             await PostManager.flagPost(post.id);
@@ -425,28 +432,37 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
         }
         finally {
             setLoading(false);
+            setProcessing(false);
         }
     }
 
     const toggleLike = async () => {
         try {
+            setProcessing(true);
             setLikeLoading(true);
             await PostManager.addLikeToPost(post.id);
         }
         catch(error) {
             setAlert(error.message);
         }
-        setLikeLoading(false);
+        finally {
+            setLikeLoading(false);
+            setProcessing(false);
+        }
     }
 
     const toggleDislike = async () => {
         try {
+            setProcessing(true);
             setDislikeLoading(true);
             await PostManager.addDislikeToPost(post.id);
         } catch (error) {
             setAlert(error.message);
         }
-        setDislikeLoading(false);
+        finally {
+            setDislikeLoading(false);
+            setProcessing(false);
+        }
     }
 
     const handleActionsOpen = () => {
@@ -516,7 +532,7 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
         </>
 
     const postActions = <>
-        <IconButton aria-label="post-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen}><MoreVertIcon /></IconButton>
+        <IconButton aria-label="post-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen} disabled={processing}><MoreVertIcon /></IconButton>
         <Menu id="actions-menu"
             anchorEl={actionsAnchor.current}
             anchorOrigin={{ vertical: "top", horizontal: "right" }}
@@ -660,13 +676,13 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                                         {
                                             likeLoading
                                             ?
-                                            <button type={'button'} className={iconLabelStyles.link}>
+                                            <button type={'button'} className={iconLabelStyles.link} disabled={processing}>
                                                 <CircularProgressWithIcon 
                                                     icon={<ThumbUpOutlinedIcon style={{ color: '#023600', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
                                                     props={{size : 16, style: {color: '#023600', marginLeft: '8px', marginBottom: '8px', }  }} />
                                             </button>                                                    
                                             :
-                                            <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike}>
+                                            <button type={'button'} className={iconLabelStyles.link} onClick={toggleLike} disabled={processing}>
                                                 { like? 
                                                     <ThumbUpOutlinedIcon className={iconLabelStyles.icon} style={{color: '#023600'}}/> : 
                                                     <ThumbUpOutlinedIcon className={iconLabelStyles.icon}/>
@@ -678,13 +694,13 @@ const PostCard = ({post, setAlert, canExpand=true, startExpanded=false, singlePo
                                         {
                                             dislikeLoading
                                             ?
-                                            <button type={'button'} className={iconLabelStyles.link}>
+                                            <button type={'button'} className={iconLabelStyles.link} disabled={processing}>
                                                 <CircularProgressWithIcon 
                                                     icon={<ThumbDownOutlinedIcon style={{ color: '#f00', fontSize: '14px', marginLeft: '8px', marginBottom: '8px' }}/>} 
                                                     props={{size : 16, style: {color: '#f00', marginLeft: '8px', marginBottom: '8px', }  }} />
                                             </button>                                                    
                                             :
-                                            <button type={'button'} className={iconLabelStyles.link} onClick={toggleDislike}>
+                                            <button type={'button'} className={iconLabelStyles.link} onClick={toggleDislike} disabled={processing}>
                                                 { dislike? 
                                                     <ThumbDownOutlinedIcon className={iconLabelStyles.icon} style={like ? {fontColor: '#ff0000'} : {}} color="secondary"/> : 
                                                     <ThumbDownOutlinedIcon className={iconLabelStyles.icon}/>
