@@ -37,7 +37,7 @@ const CollapsibleTypography = ({content, loading}) => {
                                      <a target="_blank" rel="noreferrer" href={`http://${result[1]}.${result[2]}${result[3]}`}>{result[1]}.{result[2]}{result[3]}</a>{result[4]}
                                  </span>
         }, {
-            regex: /\@([a-z0-9_\-]{1,15}+)( |\,|$|\.)/gim, //regex to match a username
+            regex: /\@([a-z0-9_\-]{1,15})( |\,|$|\.)/gim, //regex to match a username
             fn: (key, result) => {
                 let username = result[1];
                 return <span key={key}><a href={`/profile/${username}`}>@{username}</a>&nbsp;</span>
