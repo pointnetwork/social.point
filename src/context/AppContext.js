@@ -13,8 +13,10 @@ const defaultContext = {
   walletError: undefined,
   identity: undefined,
   profile: undefined,
+  processing: false,
   goHome: () => {},
   setUserProfile: () => {},
+  setProcessing: () => {},
   events
 };
 
@@ -30,6 +32,7 @@ export const ProvideAppContext = ({ children }) => {
   const [, setLocation] = useLocation();
   const [profile, setUserProfile] = useState();
   const [deployer, setDeployer] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -70,7 +73,9 @@ export const ProvideAppContext = ({ children }) => {
     walletError,
     identity,
     profile,
+    processing,
     setUserProfile,
+    setProcessing,
     goHome,
     events
   }

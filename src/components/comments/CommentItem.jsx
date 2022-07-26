@@ -82,7 +82,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert}) => {
 
     const styles = useStyles();
     
-    const { walletAddress, profile, identity, events } = useAppContext();
+    const { walletAddress, profile, identity, processing, setProcessing, events } = useAppContext();
 
     const [name, setName] = useState();
     const [content, setContent] = useState();
@@ -263,6 +263,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert}) => {
 
     const deleteComment =  async () => {
         try {
+            setProcessing(true);
             setLoading(true);
             await CommentManager.deleteComment(postId, comment.id);
             parentDeleteComment(comment.id);
@@ -270,6 +271,9 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert}) => {
         catch(error) {
             setAlert(error.message);
             setLoading(false);
+        }
+        finally {
+            setProcessing(false);
         }
     };
 
@@ -284,6 +288,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert}) => {
     const saveEdit = async () => {
         try {
             const contents = inputRef.current.value.trim();
+            setProcessing(true);
             setLoading(true);
             
             const storageId = await point.putString(contents);
@@ -297,6 +302,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert}) => {
         }
         finally {
             setLoading(false);
+            setProcessing(false);
         }
     };
     
@@ -420,7 +426,7 @@ const CommentItem = ({postId, comment, parentDeleteComment, setAlert}) => {
                 {
                     (!loading &&  isOwner) &&
                     <ListItemSecondaryAction className={styles.action}>
-                        <IconButton edge="end" size="small" aria-label="comment-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen}>
+                        <IconButton edge="end" size="small" aria-label="comment-menu" aria-haspopup="true" ref={actionsAnchor} onClick={handleActionsOpen} disabled={processing}>
                             <MoreHorizOutlinedIcon fontSize="small"/>
                         </IconButton>
                         { commentActions }

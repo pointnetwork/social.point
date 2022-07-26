@@ -229,7 +229,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   const displayAboutRef = useRef();
   const actionsAnchor = useRef();
 
-  const { walletAddress, setUserProfile } = useAppContext();
+  const { walletAddress, processing, setProcessing, setUserProfile } = useAppContext();
 
   useEffect(() => {
     loadProfile();
@@ -350,6 +350,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
   };
 
   const saveEdit = async () => {
+    setProcessing(true);
     setLoading(true);
 
     const newProfile = { ...profile };
@@ -429,6 +430,7 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
     }
     finally {
       setLoading(false);
+      setProcessing(false);
     }
   };
  
@@ -453,7 +455,8 @@ const ProfileCard = ({ address, identity, setUpperLoading, setAlert }) => {
                           ref={actionsAnchor}
                           onClick={handleActionsOpen}
                           className={styles.actionButton}
-                          color="secondary">
+                          color="secondary"
+                          disabled={processing}>
                 <MoreVertIcon className={styles.actionIcon}/>
               </IconButton>
               <Menu id="actions-menu"

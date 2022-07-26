@@ -71,7 +71,7 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
 
     const [loading, setLoading] = useState(true);
     const [comments, setComments] = useState([]);
-    const {events} = useAppContext();
+    const {events, processing, setProcessing} = useAppContext();
 
     const inputRef = useRef();
 
@@ -130,6 +130,7 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
         if (inputRef && inputRef.current && inputRef.current.value && inputRef.current.value.trim()) {
             try {
                 const contents = inputRef.current.value.trim();
+                setProcessing(true);
                 setLoading(true);
                 const storageId = await point.putString(contents);
                 const result = await CommentManager.addComment(postId, storageId);
@@ -143,6 +144,7 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
             }
             finally {
                 setLoading(false);
+                setProcessing(false);
             }
         }
     }
@@ -177,7 +179,7 @@ const CommentList = ({postId, setUpperLoading, setAlert}) => {
                 :
                     <Box m={2} className={styles.commentBox}>
                         <RichTextField ref={inputRef} value="" placeholder="Add a comment..."/>
-                            <IconButton aria-label="send" ml={3} onClick={addComment}>
+                            <IconButton aria-label="send" ml={3} onClick={addComment} disabled={processing}>
                                 <SendOutlinedIcon />
                             </IconButton>
                     </Box>
