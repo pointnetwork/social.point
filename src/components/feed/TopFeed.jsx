@@ -107,22 +107,7 @@ const TopFeed = ({ setAlert, setUpperLoading, canPost=false }) => {
 
   const handleEvents = async(event) => {
     if (event) {
-      if (event.component === EventConstants.Component.Feed) {
-        switch(event.action) {
-          case EventConstants.Action.Create:
-              if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
-                // Autoload own posts
-                await reloadPosts();
-              }
-              else {
-                setReload(true);
-              }
-          break;
-          default:
-          break;
-        }
-      }
-      else if (event.component === EventConstants.Component.Post) {
+      if (event.component === EventConstants.Component.Post) {
         switch(event.action) {
           case EventConstants.Action.Delete:
             deletePost(event.id);
@@ -239,7 +224,7 @@ const TopFeed = ({ setAlert, setUpperLoading, canPost=false }) => {
                   </div>
               </Box>
               :
-              orderBy(posts.filter(post => post.createdAt > 0), ['likesCount'], ['desc'])
+              orderBy(posts.filter(post => post.createdAt > 0), ['likesCount', 'commentsCount', 'dislikesCount'], ['desc', 'desc', 'asc'])
               .map((post) => (
                   <div key={post.id} className={styles.separator}>
                     <PostCard 

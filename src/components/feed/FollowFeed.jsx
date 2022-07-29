@@ -16,6 +16,7 @@ import PostCard from "../post/PostCard";
 
 import EventConstants from "../../events";
 import PostManager from '../../services/PostManager';
+import UserManager from "../../services/UserManager";
 
 const NUM_POSTS_PER_CALL = 5;
 

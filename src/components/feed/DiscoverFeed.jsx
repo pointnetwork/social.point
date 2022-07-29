@@ -19,7 +19,7 @@ import EventConstants from "../../events";
 import PostManager from '../../services/PostManager';
 import UserManager from "../../services/UserManager";
 
-const NUM_POSTS_PER_CALL = 5;
+const NUM_POSTS_PER_CALL = 10;
 
 const useStyles = makeStyles((theme) => ({
   root: {
