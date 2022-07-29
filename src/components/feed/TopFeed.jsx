@@ -6,6 +6,7 @@ import { makeStyles } from '@material-ui/core/styles';
 
 import unionWith from "lodash/unionWith";
 import isEqual from "lodash/isEqual";
+import orderBy from "lodash/orderBy";
 
 import { Box, Button, Snackbar, SnackbarContent, Typography } from '@material-ui/core';
 
@@ -17,7 +18,7 @@ import PostCard from "../post/PostCard";
 import EventConstants from "../../events";
 import PostManager from '../../services/PostManager';
 
-const NUM_POSTS_PER_CALL = 5;
+const NUM_POSTS_PER_CALL = 20;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -55,7 +56,7 @@ const useStyles = makeStyles((theme) => ({
   },  
 }));
 
-const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
+const TopFeed = ({ setAlert, setUpperLoading, canPost=false }) => {
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
       if(length === posts.length) return;
@@ -136,10 +137,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   const getPostsLength = async() => {
     try {
       setLoading(true);
-      const data = await (account?
-        PostManager.getAllPostsByOwnerLength(account) : 
-        PostManager.getAllPostsLength());
-
+      const data = await PostManager.getAllPostsLength();
       setLength(Number(data));
     }
     catch(error) {
@@ -152,10 +150,9 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   const fetchPosts = async (onlyNew = false) => {
     try {
       setLoading(true);
-  
-      const data = await (account? 
-        PostManager.getPaginatedPostsByOwner(account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL) : 
-        PostManager.getPaginatedPosts(onlyNew?0:posts.length,NUM_POSTS_PER_CALL));
+      const lastId = Number(await PostManager.getLastPostId());
+      const lastCurrentId = (posts.length > 0)? parseInt(posts[posts.length - 1].id) : lastId;
+      const data = await PostManager.getPaginatedPosts(onlyNew?lastId:lastCurrentId,NUM_POSTS_PER_CALL,3);
 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
         .map(([id, from, contents, image, createdAt, likesCount, commentsCount, dislikesCount, liked, disliked, flagged]) => (
@@ -228,7 +225,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
     <div className={styles.root}>
         <Box className={styles.container}>
           { 
-            (length === 0)?
+            (!loading && posts.length === 0)?
               <Box color="text.disabled" 
                     display="flex" 
                     justifyContent="center" 
@@ -242,7 +239,8 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
                   </div>
               </Box>
               :
-              posts.filter(post => post.createdAt > 0).map((post) => (
+              orderBy(posts.filter(post => post.createdAt > 0), ['likesCount'], ['desc'])
+              .map((post) => (
                   <div key={post.id} className={styles.separator}>
                     <PostCard 
                       post={post}
@@ -264,4 +262,4 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   );
 
 }
-export default Feed
+export default TopFeed

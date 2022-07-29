@@ -55,7 +55,7 @@ const useStyles = makeStyles((theme) => ({
   },  
 }));
 
-const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
+const FollowFeed = ({ setAlert, setUpperLoading}) => {
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
       if(length === posts.length) return;
@@ -109,11 +109,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
       if (event.component === EventConstants.Component.Feed) {
         switch(event.action) {
           case EventConstants.Action.Create:
-              if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
-                // Autoload own posts
-                await reloadPosts();
-              }
-              else {
+              if (await UserManager.isFollowing(walletAddress, event.from)) {
                 setReload(true);
               }
           break;
@@ -136,10 +132,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   const getPostsLength = async() => {
     try {
       setLoading(true);
-      const data = await (account?
-        PostManager.getAllPostsByOwnerLength(account) : 
-        PostManager.getAllPostsLength());
-
+      const data = await PostManager.getAllPostsLength();
       setLength(Number(data));
     }
     catch(error) {
@@ -152,13 +145,12 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   const fetchPosts = async (onlyNew = false) => {
     try {
       setLoading(true);
-  
-      const data = await (account? 
-        PostManager.getPaginatedPostsByOwner(account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL) : 
-        PostManager.getPaginatedPosts(onlyNew?0:posts.length,NUM_POSTS_PER_CALL));
+      const lastId = Number(await PostManager.getLastPostId());
+      const lastCurrentId = (posts.length > 0)? parseInt(posts[posts.length - 1].id) : lastId;
+      const data = await PostManager.getPaginatedPosts(onlyNew?lastId:lastCurrentId,NUM_POSTS_PER_CALL,1);
 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
-        .map(([id, from, contents, image, createdAt, likesCount, commentsCount, dislikesCount, liked, disliked, flagged]) => (
+        .map(([id, from, contents, image, createdAt, likesCount, commentsCount, dislikesCount, liked, disliked,flagged]) => (
           {
             id,
             from,
@@ -174,7 +166,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
           }
         )  
       );
-
+      
       return newPosts;
 
     } catch(error) {
@@ -228,7 +220,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
     <div className={styles.root}>
         <Box className={styles.container}>
           { 
-            (length === 0)?
+            (!loading && posts.length === 0)?
               <Box color="text.disabled" 
                     display="flex" 
                     justifyContent="center" 
@@ -237,7 +229,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
                   <div className={styles.empty}>
                       <InboxOutlinedIcon style={{ fontSize: 32 }} />
                       <Typography 
-                        variant="caption">{`No posts yet.${ canPost? " Be the first!" : "" }`}
+                        variant="caption">{'No posts yet! Start following somebody!'}
                       </Typography>
                   </div>
               </Box>
@@ -264,4 +256,4 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   );
 
 }
-export default Feed
+export default FollowFeed

@@ -6,6 +6,7 @@ import { makeStyles } from '@material-ui/core/styles';
 
 import unionWith from "lodash/unionWith";
 import isEqual from "lodash/isEqual";
+import orderBy from "lodash/orderBy";
 
 import { Box, Button, Snackbar, SnackbarContent, Typography } from '@material-ui/core';
 
@@ -16,6 +17,7 @@ import PostCard from "../post/PostCard";
 
 import EventConstants from "../../events";
 import PostManager from '../../services/PostManager';
+import UserManager from "../../services/UserManager";
 
 const NUM_POSTS_PER_CALL = 5;
 
@@ -55,7 +57,7 @@ const useStyles = makeStyles((theme) => ({
   },  
 }));
 
-const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
+const DiscoverFeed = ({ setAlert, setUpperLoading }) => {
   const {observe} = useInView({
     onEnter: async({observe,unobserve}) => {
       if(length === posts.length) return;
@@ -66,6 +68,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   });
   const styles = useStyles();
   const [posts, setPosts] = useState([])
+  const [renderedPosts, setRenderedPosts] = useState([])
   const [length, setLength] = useState(0);
   const [loading, setLoading] = useState(false);
   const [reload, setReload] = useState(false);
@@ -90,14 +93,14 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   useEffect(() => {
     getEvents();
     return () => {
-      events.listeners["PointSocial"]["StateChange"].removeListener("StateChange", handleEvents, { type: 'feed'});
+      events.listeners["PointSocial"]["StateChange"].removeListener("StateChange", handleEvents, { type: 'discover-feed'});
       events.unsubscribe("PointSocial", "StateChange");
     };
   }, []);
 
   const getEvents = async() => {
     try {
-      (await events.subscribe("PointSocial", "StateChange")).on("StateChange", handleEvents, { type: 'feed'});
+      (await events.subscribe("PointSocial", "StateChange")).on("StateChange", handleEvents, { type: 'discover-feed'});
     }
     catch(error) {
       console.log(error.message);
@@ -106,22 +109,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
 
   const handleEvents = async(event) => {
     if (event) {
-      if (event.component === EventConstants.Component.Feed) {
-        switch(event.action) {
-          case EventConstants.Action.Create:
-              if (event.from.toString().toLowerCase() === walletAddress.toLowerCase()) {
-                // Autoload own posts
-                await reloadPosts();
-              }
-              else {
-                setReload(true);
-              }
-          break;
-          default:
-          break;
-        }
-      }
-      else if (event.component === EventConstants.Component.Post) {
+      if (event.component === EventConstants.Component.Post) {
         switch(event.action) {
           case EventConstants.Action.Delete:
             deletePost(event.id);
@@ -136,10 +124,7 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   const getPostsLength = async() => {
     try {
       setLoading(true);
-      const data = await (account?
-        PostManager.getAllPostsByOwnerLength(account) : 
-        PostManager.getAllPostsLength());
-
+      const data = await PostManager.getAllPostsLength();
       setLength(Number(data));
     }
     catch(error) {
@@ -152,10 +137,9 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   const fetchPosts = async (onlyNew = false) => {
     try {
       setLoading(true);
-  
-      const data = await (account? 
-        PostManager.getPaginatedPostsByOwner(account,onlyNew?0:posts.length,NUM_POSTS_PER_CALL) : 
-        PostManager.getPaginatedPosts(onlyNew?0:posts.length,NUM_POSTS_PER_CALL));
+      const lastId = Number(await PostManager.getLastPostId());
+      const lastCurrentId = (posts.length > 0)? posts[posts.length - 1].id : lastId;
+      const data = await PostManager.getPaginatedPosts(onlyNew?lastId:lastCurrentId,NUM_POSTS_PER_CALL,0);
 
       const newPosts = data.filter(r => (parseInt(r[4]) !== 0))
         .map(([id, from, contents, image, createdAt, likesCount, commentsCount, dislikesCount, liked, disliked, flagged]) => (
@@ -175,7 +159,16 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
         )  
       );
 
-      return newPosts;
+      return await Promise.all(newPosts.map(async post => {
+        try {
+          post.weight = (await UserManager.isFollowing(walletAddress, post.from))? 1: 0;
+        }
+        catch(error) {
+          console.warn(error.message);
+        }
+        return post;
+      }));      
+      //return newPosts;
 
     } catch(error) {
       console.log(error.message);
@@ -192,7 +185,9 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
       const posts = await fetchPosts(loadNew);
       setPosts(prev => {
         const result = unionWith(prev, posts, isEqual);
-        result.sort(compareByTimestamp);
+        //result.sort(compareByTimestamp);
+        console.log("POSTS:");
+        console.log(result);
         return result;
       });
     }
@@ -218,17 +213,10 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
 
   return (
     <>
-    <Snackbar open={reload}
-              anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-        <SnackbarContent 
-          message={'New posts available!'}
-          action={<><Button color="secondary" size="small" onClick={()=>{setReload(false)}}>Dismiss</Button><Button color="secondary" size="small" onClick={()=>{reloadPosts()}}>Reload</Button></>}
-        />
-    </Snackbar>
     <div className={styles.root}>
         <Box className={styles.container}>
           { 
-            (length === 0)?
+            (!loading && posts.length === 0)?
               <Box color="text.disabled" 
                     display="flex" 
                     justifyContent="center" 
@@ -237,12 +225,13 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
                   <div className={styles.empty}>
                       <InboxOutlinedIcon style={{ fontSize: 32 }} />
                       <Typography 
-                        variant="caption">{`No posts yet.${ canPost? " Be the first!" : "" }`}
+                        variant="caption">{`No posts yet.`}
                       </Typography>
                   </div>
               </Box>
               :
-              posts.filter(post => post.createdAt > 0).map((post) => (
+              orderBy(posts.filter(post => post.createdAt > 0), ['weight', 'likesCount', 'commentsCount', 'dislikesCount', 'createdAt'], ['desc', 'desc', 'desc', 'asc', 'desc'])
+              .map((post) => (
                   <div key={post.id} className={styles.separator}>
                     <PostCard 
                       post={post}
@@ -264,4 +253,4 @@ const Feed = ({ account, setAlert, setUpperLoading, canPost=false }) => {
   );
 
 }
-export default Feed
+export default DiscoverFeed

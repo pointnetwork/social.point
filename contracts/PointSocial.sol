@@ -3,6 +3,8 @@ pragma solidity >=0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -11,6 +13,9 @@ import "point-contract-manager/contracts/IIdentity.sol";
 
 contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using Counters for Counters.Counter;
+
+    /************************* STORAGE LAYOUT START *************************/
+
     Counters.Counter internal _postIds;
     Counters.Counter internal _commentIds;
     Counters.Counter internal _likeIds;
@@ -107,8 +112,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     Counters.Counter internal _dislikeIds;
     mapping(uint256 => uint256[]) public dislikeIdsByPost;
     mapping(address => uint256[]) public dislikeIdsByUser;
-    mapping(address => mapping(uint256 => uint256))
-        public dislikeIdByUserAndPost;
+    mapping(address => mapping(uint256 => uint256)) public dislikeIdByUserAndPost;
     mapping(uint256 => Dislike) public dislikeById;
 
     struct PostWithMetadata {
@@ -122,10 +126,57 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 dislikesCount;
         bool liked;
         bool disliked;
+        bool flagged;
     }
 
+    /*
+     * Follow functions storage
+     */
+    using EnumerableSet for EnumerableSet.AddressSet;
+
+    struct FollowConnections {
+        EnumerableSet.AddressSet following;
+        EnumerableSet.AddressSet followers;
+        EnumerableSet.AddressSet blocked;
+    }
+
+    mapping(address => FollowConnections) internal _followConnectionsByUser;
+
+    enum FollowAction {
+        Follow,
+        UnFollow,
+        Block,
+        UnBlock
+    }
+
+    event FollowEvent(
+        address indexed from, 
+        address indexed to, 
+        FollowAction action);
+
+    enum FeedType {
+        Discover,
+        Follow,
+        Fresh,
+        Top
+    }
+
+    /************************* STORAGE LAYOUT END *************************/
+
     modifier postExists(uint256 _postId) {
-        require(postById[_postId].from != address(0), "Post does not exist");
+        require(postById[_postId].from != address(0), "ERROR_POST_DOES_NOT_EXISTS");
+        _;
+    }
+
+    modifier onlyDeployer() {
+        require(IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender),
+            "ERROR_NOT_DEPLOYER"
+        );
+        _;
+    }
+    
+    modifier onlyMigrator() {
+        require(msg.sender == _migrator, "ERROR_NOT_MIGRATOR");
         _;
     }
 
@@ -139,15 +190,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _identityHandle = identityHandle;
     }
 
-    function _authorizeUpgrade(address) internal view override {
-        require(
-            IIdentity(_identityContractAddr).isIdentityDeployer(
-                _identityHandle,
-                msg.sender
-            ),
-            "You are not a deployer of this identity"
-        );
-    }
+    function _authorizeUpgrade(address) internal view override onlyDeployer {}
 
     function addMigrator(address migrator) public onlyOwner {
         require(_migrator == address(0), "Access Denied");
@@ -195,8 +238,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         uint256 postId,
         bytes32 contents,
         bytes32 image
-    ) public {
-        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+    ) public postExists(postId) {
         require(
             msg.sender == postById[postId].from,
             "ERROR_CANNOT_EDIT_OTHERS_POSTS"
@@ -214,8 +256,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function deletePost(uint256 postId) public {
-        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
+    function deletePost(uint256 postId) public postExists(postId) {
         require(
             msg.sender == postById[postId].from,
             "ERROR_CANNOT_DELETE_OTHERS_POSTS"
@@ -236,13 +277,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function flagPost(uint256 postId) public {
-        require(IIdentity(_identityContractAddr).isIdentityDeployer(_identityHandle, msg.sender), 
-            "ERROR_PERMISSION_DENIED");
-        require(postById[postId].createdAt != 0, "ERROR_POST_DOES_NOT_EXISTS");
-
+    function flagPost(uint256 postId) public onlyDeployer postExists(postId) {
         postIsFlagged[postId] = !postIsFlagged[postId];
-
         emit StateChange(postId, msg.sender, block.timestamp, Component.Post, Action.Flag);
     }
 
@@ -264,33 +300,92 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return length;
     }
 
-    function getPaginatedPosts(uint256 cursor, uint256 howMany)
+    function getLastPostId() public view returns (uint256) {
+        return postIds[postIds.length-1];
+    }
+
+    function _idToIndex(uint256 postId) internal view returns (uint256) {
+        for (uint256 i = 0; i < postIds.length; i++) {
+            if (postIds[i] == postId) return i;
+        }
+        return 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    }
+
+    function _includePost(uint256 postId, FeedType _type) internal view returns (bool) {
+        Post memory p = postById[postId];
+        if (_type == FeedType.Discover) {
+            return (!postIsFlagged[postId] &&               /* Filter flagged posts   */ 
+                   !(isBlocked(msg.sender, p.from)          /* Filter blocked users   */
+                   || isBlocked(p.from, msg.sender)) &&     /* Filter blocked users   */
+                   !(p.from == msg.sender) //&&             /* Filter own posts       */
+                   //!isFollowing(msg.sender, p.from)       /* Filter following users */
+            );       
+        }
+        else if (_type == FeedType.Follow) {
+            return (isFollowing(msg.sender, p.from));       /* Filter following users */
+        }
+        else if (_type == FeedType.Top) {
+            return (!postIsFlagged[postId] &&               /* Filter flagged posts   */ 
+                   !(isBlocked(msg.sender, p.from)          
+                   || isBlocked(p.from, msg.sender)) &&     /* Filter blocked users   */
+                   !(p.likesCount == 0));                   /* Filter unvoted posts   */       
+        }
+        else {
+            return (!(isBlocked(msg.sender, p.from)         /* Filter blocked users   */
+                   || isBlocked(p.from, msg.sender)));
+        }
+    }
+
+    function getPaginatedPosts(uint256 _cursor, uint256 _howMany, FeedType _type)
         public
         view
         returns (PostWithMetadata[] memory)
     {
-        uint256 length = howMany;
-        if (length > postIds.length - cursor) {
-            length = postIds.length - cursor;
+        require(_howMany > 0, "ERROR_INVALID_AMOUNT");
+        require(_cursor > 0, "ERROR_INVALID_CURSOR");
+
+        uint256 index = _idToIndex(_cursor);
+
+        require(index < postIds.length, "ERROR_CURSOR_NOT_FOUND");
+
+        uint256 length = _howMany;
+        uint256 cursor = (index > 0)? index-1 : 0;
+
+        if (length > (cursor+1)) {
+            length = (cursor+1);
         }
 
-        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](length);
-        for (uint256 i = length; i > 0; i--) {
-            postsWithMetadata[length - i] = _getPostWithMetadata(postIds[postIds.length - cursor - i]);
+        PostWithMetadata[] memory posts = new PostWithMetadata[](length);
+
+        uint256 j = 0;
+        int256 i = int(cursor);
+        while (i >= 0 && j < length) {
+            uint256 id = postIds[uint(i)];
+            if (_includePost(id, _type)) {
+                posts[j] = _getPostWithMetadata(id);
+                j++; 
+            }
+            i--;
         }
-        return postsWithMetadata;
+        return posts;
     }
+
 
     function getAllPostsByOwner(address owner)
         public
         view
         returns (PostWithMetadata[] memory)
     {
-        PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](postIdsByOwner[owner].length);
-        for (uint256 i = 0; i < postIdsByOwner[owner].length; i++) {
-            postsWithMetadata[i] = _getPostWithMetadata(postIdsByOwner[owner][i]);
+        if (isBlocked(msg.sender, owner) || isBlocked(owner, msg.sender)) {
+            return new PostWithMetadata[](0);
         }
-        return postsWithMetadata;
+        else {
+            PostWithMetadata[] memory postsWithMetadata = new PostWithMetadata[](postIdsByOwner[owner].length);
+            for (uint256 i = 0; i < postIdsByOwner[owner].length; i++) {
+                postsWithMetadata[i] = _getPostWithMetadata(postIdsByOwner[owner][i]);
+            }
+            return postsWithMetadata;
+        }
     }
 
     function getAllPostsByOwnerLength(address owner)
@@ -319,7 +414,8 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             post.commentsCount,
             getPostDislikesQty(_postId),
             checkLikeToPost(_postId),
-            checkDislikeToPost(_postId)
+            checkDislikeToPost(_postId),
+            postIsFlagged[_postId]
         );
         return postWithMetadata;
     }
@@ -636,6 +732,10 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return false;
     }
 
+    /**********************************************************************
+    * User Profile Functions
+    ***********************************************************************/
+
     function setProfile(
         bytes32 name_,
         bytes32 location_,
@@ -655,7 +755,9 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         return profileByOwner[id_];
     }
 
-    // Data Migrator Functions - only callable by _migrator
+    /**********************************************************************
+    * Data Migrator Functions - only callable by _migrator
+    ***********************************************************************/
 
     function add(
         uint256 id,
@@ -664,8 +766,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 image,
         uint16 likesCount,
         uint256 createdAt
-    ) public {
-        require(msg.sender == _migrator, "Access Denied");
+    ) public onlyMigrator {
 
         Post memory _post = Post({
             id: id,
@@ -697,8 +798,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         address author,
         bytes32 contents,
         uint256 createdAt
-    ) public {
-        require(msg.sender == _migrator, "Access Denied");
+    ) public onlyMigrator {
 
         Comment memory _comment = Comment({
             id: id,
@@ -729,8 +829,7 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bytes32 about,
         bytes32 avatar,
         bytes32 banner
-    ) public {
-        require(msg.sender == _migrator, "Access Denied");
+    ) public onlyMigrator {
 
         profileByOwner[user].displayName = name;
         profileByOwner[user].displayLocation = location;
@@ -740,4 +839,80 @@ contract PointSocial is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         emit ProfileChange(user, block.timestamp);
     }
+
+    /**********************************************************************
+    * Follow functions
+    ***********************************************************************/
+
+    modifier onlyMutuals (address _user) {
+        require(isFollowing(msg.sender, _user), "ERROR_NOT_MUTUAL");
+        require(isFollowing(_user, msg.sender), "ERROR_NOT_MUTUAL");
+        _;
+    }
+
+    modifier onlyFollowers (address _user) {
+        require((msg.sender == _user) || isFollowing(msg.sender, _user), "ERROR_NOT_FOLLOWING");
+        _;
+    }
+
+    modifier notBlocked (address _user) {
+        require(!isBlocked(msg.sender, _user), "ERROR_USER_BLOCKED");
+        require(!isBlocked(_user, msg.sender), "ERROR_USER_BLOCKED");
+        _;
+    }
+
+    function followUser(address _user) public notBlocked(_user) {
+        EnumerableSet.add(_followConnectionsByUser[msg.sender].following, _user);
+        EnumerableSet.add(_followConnectionsByUser[_user].followers, msg.sender);
+        emit FollowEvent(msg.sender, _user, FollowAction.Follow);
+    }
+
+    function unfollowUser(address _user) public { 
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].following, _user);
+        EnumerableSet.remove(_followConnectionsByUser[_user].followers, msg.sender);
+        emit FollowEvent(msg.sender, _user, FollowAction.UnFollow);
+    }
+
+    function isFollowing(address _owner, address _user) public view returns (bool) {   
+        return EnumerableSet.contains(_followConnectionsByUser[_owner].following, _user);
+    }
+
+    function followingList(address _user) public onlyFollowers(_user) view returns (address[] memory) {
+        return EnumerableSet.values(_followConnectionsByUser[_user].following);
+    }
+
+    function followingCount(address _user) public view returns (uint256) {
+        return EnumerableSet.length(_followConnectionsByUser[_user].following);
+    }
+
+    function followersList(address _user) public onlyFollowers(_user) view returns (address[] memory) {        
+        return EnumerableSet.values(_followConnectionsByUser[_user].followers);
+    }
+
+    function followersCount(address _user) public view returns (uint256) {        
+        return EnumerableSet.length(_followConnectionsByUser[_user].followers);
+    }
+
+    function blockUser(address _user) public {
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].following, _user);
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].followers, _user);
+        EnumerableSet.remove(_followConnectionsByUser[_user].following, msg.sender);
+        EnumerableSet.remove(_followConnectionsByUser[_user].followers, msg.sender);
+        EnumerableSet.add(_followConnectionsByUser[msg.sender].blocked, _user);
+        emit FollowEvent(msg.sender, _user, FollowAction.Block);
+    }
+
+    function unBlockUser(address _user) public {
+        EnumerableSet.remove(_followConnectionsByUser[msg.sender].blocked, _user);
+        emit FollowEvent(msg.sender, _user, FollowAction.UnBlock);
+    }
+
+    function isBlocked(address _owner, address _user) public view returns (bool) {        
+        return EnumerableSet.contains(_followConnectionsByUser[_owner].blocked, _user);
+    }
+
+    function blockList() public view returns (address[] memory) {
+        return EnumerableSet.values(_followConnectionsByUser[msg.sender].blocked);
+    }
+
 }

@@ -10,7 +10,20 @@ import { Backdrop,
          Snackbar,
          Container } from '@material-ui/core';
 
+import Tabs from '@material-ui/core/Tabs';
+import Tab from '@material-ui/core/Tab';
+import TabPanel from '../../components/tabs/TabPanel';
 
+import DiscoverFeed from '../../components/feed/DiscoverFeed';
+import FollowFeed from '../../components/feed/FollowFeed';
+import FreshFeed from '../../components/feed/FreshFeed';
+import TopFeed from '../../components/feed/TopFeed';
+
+import ExploreOutlinedIcon from '@material-ui/icons/ExploreOutlined';
+import PersonPinCircleOutlinedIcon from '@material-ui/icons/PersonPinCircleOutlined';
+import EcoOutlinedIcon from '@material-ui/icons/EcoOutlined';
+import EmojiEventsOutlinedIcon from '@material-ui/icons/EmojiEventsOutlined';
+         
 import CircularProgressWithIcon from "../../components/generic/CircularProgressWithIcon";
 import ShareCard from "../../components/share/ShareCard";
 import Feed from "../../components/feed/Feed";
@@ -31,17 +44,33 @@ const useStyles = makeStyles((theme) => ({
         minHeight: "100%",
         flexDirection: "column",
         justifyContent: "center",
-        maxWidth: '900px'
+        maxWidth: '900px',
     },
     backdrop: {
         zIndex: theme.zIndex.drawer + 1,
     },
+    tab: {
+        padding: 0, 
+        margin: 0,
+    },
+    tabpanel: {
+        padding: 0,
+        padding: 0,
+    }
 }));
+
+function a11yProps(index) {
+    return {
+      id: `scrollable-prevent-tab-${index}`,
+      'aria-controls': `scrollable-prevent-tabpanel-${index}`,
+    };
+}
 
 const Home = () => {
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState("");    
     const { walletAddress } = useAppContext();
+    const [tabIndex, setTabIndex] = useState(0);
 
     const styles = useStyles();
   
@@ -50,6 +79,10 @@ const Home = () => {
           return;
         }
         setAlert("");
+    };    
+
+    const handleChange = (event, newIndex) => {
+        setTabIndex(newIndex);
     };    
     
     return (
@@ -66,8 +99,29 @@ const Home = () => {
                 <>
                     <Appbar setAlert={setAlert} setLoading={setLoading}/>
                     <Container fixed={true} className={styles.container}>
+                        <Tabs value={tabIndex}
+                              onChange={handleChange}
+                              variant="fullWidth"
+                              scrollButtons="off"
+                              aria-label="feed-selector" className={styles.tab}>
+                            <Tab icon={<ExploreOutlinedIcon />} aria-label="discover" {...a11yProps(0)} />
+                            <Tab icon={<PersonPinCircleOutlinedIcon />} aria-label="following" {...a11yProps(1)}/>
+                            <Tab icon={<EcoOutlinedIcon />}  aria-label="fresh"  {...a11yProps(2)} />
+                            <Tab icon={<EmojiEventsOutlinedIcon />}  aria-label="top" {...a11yProps(3)}/>
+                        </Tabs>
                         <ShareCard setAlert={setAlert} />
-                        <Feed setAlert={setAlert} setUpperLoading={setLoading} canPost={true}/>
+                        <TabPanel value={tabIndex} index={0} className={styles.tabpanel}>
+                            <DiscoverFeed setAlert={setAlert} setUpperLoading={setLoading} />
+                        </TabPanel>
+                        <TabPanel value={tabIndex} index={1} className={styles.tabpanel}>
+                            <FollowFeed setAlert={setAlert} setUpperLoading={setLoading} />
+                        </TabPanel>
+                        <TabPanel value={tabIndex} index={2} className={styles.tabpanel}>
+                            <FreshFeed setAlert={setAlert} setUpperLoading={setLoading} canPost={true}/>
+                        </TabPanel>
+                        <TabPanel value={tabIndex} index={3} className={styles.tabpanel}>
+                            <TopFeed setAlert={setAlert} setUpperLoading={setLoading} />
+                        </TabPanel>
                     </Container>
                     <Footer />
                 </>
